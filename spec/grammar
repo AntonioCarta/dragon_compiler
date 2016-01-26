@@ -1,0 +1,49 @@
+# Grammar and token definition for a toy language.
+###################################
+#             GRAMMAR             #
+###################################
+
+Program -> block
+block -> { decls stmts }
+decls -> decls decl | epsilon
+decl -> type ID;
+type -> type[num] | basic
+stmts -> stmts stmt | epsilon
+
+stmt -> loc = bool;
+    | if(bool) stmt
+    | if(bool) stmt else stmt
+    | while(bool) stmt
+    | break;
+    | block
+
+loc -> loc[bool]
+    | ID
+
+bool -> bool || join
+    | join
+join -> join && equality
+    | equality
+equality -> equality == rel
+    | equality != rel
+    | rel
+rel -> expr < expr
+    | expr <= expr
+    | expr >= expr
+    | expr > expr
+    | expr
+expr -> expr + term
+    | expr - term
+    | term
+term -> term*unary
+    | term / unary
+    | unary
+unary -> !unary
+    | - unary
+    | factor
+factor -> (bool)
+    | loc
+    | num
+    | real
+    | true
+    | false

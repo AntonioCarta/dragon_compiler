@@ -1,0 +1,25 @@
+# 26/01/2016
+# Antonio Carta
+#
+# Token definition.
+# Value is always a string.
+#
+#####################################
+
+RESERVED WORDS:
+If, Else, While, Break
+
+SPECIAL TOKENS:
+CloseBlock, OpenBlock, SemiColon,
+LArrParen, RArrParen, LParen, RParen,
+Assign
+
+
+BOOLOP: ||, &&
+RELOP: <=, ==, >=, <, >, !=
+UNARY: !, -
+NUMOP: +, -, *, /
+
+ID: value
+Num: value
+Real: value
