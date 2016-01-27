@@ -1,19 +1,17 @@
 use std::collections::HashMap;
 use std::io;
-use std::io::{Read, Stdin};
 use std::string::String;
-use std::string;
 
 #[derive(PartialEq, Eq, Hash, Debug)]
-enum Boolop {
+pub enum Boolop {
     Or,
     And
 }
 
 #[derive(PartialEq, Eq, Hash, Debug)]
-enum Relop {
+pub enum Relop {
     Ge, Gr,
-    Leq, les,
+    Leq, Les,
     Equ, Neq,
 }
 
@@ -24,7 +22,7 @@ enum Unary {
 }
 
 #[derive(PartialEq, Eq, Hash, Debug)]
-enum Numop {
+pub enum Numop {
     Add, Sub,
     Mul, Div,
 }
@@ -32,6 +30,7 @@ enum Numop {
 #[derive(PartialEq, Eq, Hash, Debug)]
 pub enum Token {
     Eof, // Finished.
+    Error, // Parsing error.
     /* Reserved words. */
     If,
     Else,
@@ -50,8 +49,8 @@ pub enum Token {
     NumOP(Numop),
     /* Identifiers ad Numbers. */
     Ide(String),
-    Num(i32),
-    Real(String), /* Hash trait not implemented for float. */
+    Num(u32),
+    //Real(String), /* Hash trait not implemented for float. */
 }
 
 pub struct Scanner {
@@ -61,6 +60,7 @@ pub struct Scanner {
     */
     createdTokens : HashMap<Token, Token>,
     buffer : String,
+    read_from_stdin : bool,
     lookahead : char,
 }
 
@@ -72,6 +72,17 @@ impl Scanner {
         Scanner {
             createdTokens : HashMap::new(),
             buffer : s,
+            read_from_stdin : true,
+            lookahead : ' ',
+        }
+    }
+
+    pub fn new_static(s : String) -> Scanner {
+        println!("{}", s);
+        Scanner {
+            createdTokens : HashMap::new(),
+            buffer : s,
+            read_from_stdin : true,
             lookahead : ' ',
         }
     }
@@ -118,29 +129,58 @@ impl Scanner {
             self.lookahead = self.read_char();
         }
         /* TODO: check for float. */
-        Token::Num(0)
+        Token::Num(v)
     }
 
+    //TODO: really broken too much copies, inefficient.
     fn scan_iden_keyword(&mut self) -> Token {
         //let keywords = {"if"; "else"; "while"; "break"};
         let mut s = String::new();
+        let mut s1 = String::new();
         while self.lookahead.is_alphanumeric() {
             s.push(self.lookahead);
+            s1.push(self.lookahead);
             self.lookahead = self.read_char();
         }
         /* TODO: check for keywords. */
-        Token::Ide(s)
+        let x = s.as_bytes();
+        if x == "If".as_bytes() {
+            Token::If
+        } else if x == "else".as_bytes() {
+            Token::Else
+        } else if x == "while".as_bytes() {
+            Token::While
+        } else if x == "break".as_bytes() {
+            Token::Break
+        } else {
+            Token::Ide(s1)
+        }
     }
 
     fn scan_relop(&mut self) -> Token {
         // '='|'!'|'<'|'>'
-        self.lookahead = ' '; // match token.
-        Token::LParen
+        let c = self.lookahead;
+        self.lookahead = self.read_char();
+        match (c, self.lookahead) {
+            ('=', '=') => self.single_token(Token::RelOP(Relop::Equ)),
+            ('!', '=') => self.single_token(Token::RelOP(Relop::Neq)),
+            ('<', '=') => self.single_token(Token::RelOP(Relop::Leq)),
+            ('>', '=') => self.single_token(Token::RelOP(Relop::Ge)),
+            ('>', _)   => Token::RelOP(Relop::Gr),
+            ('<', _)   => Token::RelOP(Relop::Les),
+            ('!', _)   => Token::Unary(Unary::Not),
+            ('=', _)   => Token::Assign,
+            (_, _)     => panic!("scan_relop: this case should be impossible."),
+        }
     }
     fn scan_boolop(&mut self) -> Token {
-        // '|'|'&'
-        self.lookahead = ' '; // match token.
-        Token::LParen
+        let c = self.lookahead;
+        self.lookahead = self.read_char();
+        match (c, self.lookahead) {
+            ('|', '|') => self.single_token(Token::BoolOP(Boolop::Or)),
+            ('&', '&') => self.single_token(Token::BoolOP(Boolop::And)),
+            _          => Token::Error,
+        }
     }
 
     fn read_char(&mut self) -> char {
