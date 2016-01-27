@@ -1,0 +1,10 @@
+     Running `target\debug\mini_compiler.exe`
+Mini Compiler.
+(3+4);
+
+LParen
+Num(0)
+NumOP(Add)
+Num(0)
+RParen
+SemiColon
