@@ -1,5 +1,6 @@
 use lexer::Token;
 mod lexer;
+mod parser;
 mod test;
 
 fn main() {

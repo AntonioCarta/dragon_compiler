@@ -28,6 +28,11 @@ pub enum Numop {
 }
 
 #[derive(PartialEq, Eq, Hash, Debug)]
+pub enum BasicType {
+    Int, Float,
+}
+
+#[derive(PartialEq, Eq, Hash, Debug)]
 pub enum Token {
     Eof, // Finished.
     Error, // Parsing error.
@@ -47,7 +52,8 @@ pub enum Token {
     RelOP(Relop),
     Unary(Unary),
     NumOP(Numop),
-    /* Identifiers ad Numbers. */
+    /* Identifiers, Types and Numbers. */
+    Type(BasicType),
     Ide(String),
     Num(u32),
     //Real(String), /* Hash trait not implemented for float. */
