@@ -1,12 +1,12 @@
-use lexer::Token;
-
-mod lexer;
+use lexer;
+use lexer::{Scanner, Token};
 
 fn scan_string(s : String) -> Vec<lexer::Token> {
-    let scanner = lexer::Scanner(s);
-    let v = vec![];
+    let mut scanner = lexer::Scanner::new_static(s);
+    let mut v = vec![];
+    let mut tok = scanner.scan();
     while tok != lexer::Token::Eof {
-        v.push();
+        v.push(tok);
         tok = scanner.scan();
     }
     v
@@ -25,13 +25,4 @@ fn test_1() {
         Token::SemiColon,
     ];
     assert!(res == sol);
-}
-
-fn test_2() {
-    let s = "{5<x; 4==2()}";
-    let v = scan_string(s);
-}
-
-fn test_3() {
-    let s = "(1+3);"
 }
