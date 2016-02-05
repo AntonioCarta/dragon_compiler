@@ -66,15 +66,16 @@ impl Token {
         }
     }
 
-    pub fn to_string(&self) -> Cow<str> {
+    // Just for debugging purpose.
+    pub fn to_cow_string(&self) -> Cow<str> {
         match self.tag {
             Tag::Eof => Cow::Borrowed("EOF"),
-            Tag::Error => Cow::Borrowed("error "), // Parsing error.
+            Tag::Error => Cow::Borrowed("error"), // Parsing error.
             /* Reserved words. */
-            Tag::If => Cow::Borrowed("if "),
-            Tag::Else => Cow::Borrowed("else "),
-            Tag::While => Cow::Borrowed("while "),
-            Tag::Break => Cow::Borrowed("break "),
+            Tag::If => Cow::Borrowed("if"),
+            Tag::Else => Cow::Borrowed("else"),
+            Tag::While => Cow::Borrowed("while"),
+            Tag::Break => Cow::Borrowed("break"),
             /* Separators. */
             Tag::CloseBlock => Cow::Borrowed("}"),
             Tag::OpenBlock => Cow::Borrowed("{"),
@@ -87,37 +88,37 @@ impl Token {
             /* Operators. */
             Tag::BoolOp => {
                 match self.info {
-                    TokenInfo::And => Cow::Borrowed("&& "),
-                    TokenInfo::Or => Cow::Borrowed("|| "),
+                    TokenInfo::And => Cow::Borrowed("&&"),
+                    TokenInfo::Or => Cow::Borrowed("||"),
                     _ => panic!("Wrong BoolOp info inside token."),
                 }
             },
             Tag::RelOp => {
                 match self.info {
-                    TokenInfo::Ge => Cow::Borrowed(">= "),
-                    TokenInfo::Gr => Cow::Borrowed("> "),
-                    TokenInfo::Leq => Cow::Borrowed("<= "),
-                    TokenInfo::Les => Cow::Borrowed("< "),
-                    TokenInfo::Equ => Cow::Borrowed("== "),
-                    TokenInfo::Neq => Cow::Borrowed("!= "),
+                    TokenInfo::Ge => Cow::Borrowed(">="),
+                    TokenInfo::Gr => Cow::Borrowed(">"),
+                    TokenInfo::Leq => Cow::Borrowed("<="),
+                    TokenInfo::Les => Cow::Borrowed("<"),
+                    TokenInfo::Equ => Cow::Borrowed("=="),
+                    TokenInfo::Neq => Cow::Borrowed("!="),
                     _ => panic!("Wrong RelOp info inside token."),
                 }
             },
             Tag::Unary => Cow::Borrowed("!"),
             Tag::NumOp => {
                 match self.info {
-                    TokenInfo::Add => Cow::Borrowed("+ "),
-                    TokenInfo::Sub => Cow::Borrowed("- "),
-                    TokenInfo::Mul => Cow::Borrowed("* "),
-                    TokenInfo::Div => Cow::Borrowed("/ "),
+                    TokenInfo::Add => Cow::Borrowed("+"),
+                    TokenInfo::Sub => Cow::Borrowed("-"),
+                    TokenInfo::Mul => Cow::Borrowed("*"),
+                    TokenInfo::Div => Cow::Borrowed("/"),
                     _ => panic!("Wrong NumOp info inside token."),
                 }
             },
             /* Identifiers, Types and Numbers. */
             Tag::Type => {
                 match self.info {
-                    TokenInfo::Int => Cow::Borrowed("type(int) "),
-                    TokenInfo::Float => Cow::Borrowed("type(float) "),
+                    TokenInfo::Int => Cow::Borrowed("type(int)"),
+                    TokenInfo::Float => Cow::Borrowed("type(float)"),
                     _ => panic!("Wrong Type info inside token."),
                 }
             },
@@ -131,8 +132,8 @@ impl Token {
                     Cow::Owned(format!("{}", x))
                 } else { panic!("Wrong number info inside token.") }
             },
-            Tag::True => Cow::Borrowed("True "),
-            Tag::False => Cow::Borrowed("False "),
+            Tag::True => Cow::Borrowed("True"),
+            Tag::False => Cow::Borrowed("False"),
         }
     }
 }
@@ -233,6 +234,10 @@ impl Scanner {
             Token::new(Tag::True, TokenInfo::NoInfo)
         } else if x == "False".as_bytes() {
             Token::new(Tag::False, TokenInfo::NoInfo)
+        } else if x == "int".as_bytes() {
+            Token::new(Tag::Type, TokenInfo::Int)
+        } else if x == "float".as_bytes() {
+            Token::new(Tag::Type, TokenInfo::Float)
         } else {
             Token::new(Tag::Ide, TokenInfo::Ide(s1))
         }

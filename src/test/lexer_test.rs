@@ -1,7 +1,9 @@
+#[cfg(test)]
+mod test{
 use lexer;
-use lexer::{Scanner, Token, Tag};
+use lexer::{Scanner};
 
-fn scan_string(s : String) -> Vec<lexer::Token> {
+fn scan_string(s : String) -> String {
     let mut scanner = lexer::Scanner::new_static(s);
     let mut v = vec![];
     let mut tok = scanner.scan();
@@ -9,20 +11,22 @@ fn scan_string(s : String) -> Vec<lexer::Token> {
         v.push(tok);
         tok = scanner.scan();
     }
-    v
+
+    let mut s = String::new();
+    for el in v {
+        s.push_str(&el.to_cow_string());
+    }
+    s
 }
 
 #[test]
-fn test_1() {
-    let s = "(1+3);";
-    //let res = scan_string(s);
-    let sol = vec![
-        Tag::LParen,
-        Tag::Num,
-        Tag::NumOp,
-        Tag::Num,
-        Tag::RParen,
-        Tag::SemiColon,
-    ];
-    //assert!(res == sol);
+fn basic_test() {
+    let s = "(1+3-x*y/543);";
+    let res = scan_string(String::from(s));
+    assert!(res == String::from(s));
+
+    let s = "{if;while;()[]else;break}";
+    let res = scan_string(String::from(s));
+    assert!(res == String::from(s));
+}
 }
