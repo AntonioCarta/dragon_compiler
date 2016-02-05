@@ -2,3 +2,6 @@ lexer
 - multiline Parsing
 - comprehensive test suite (at least one with each token type
     and a different one for each variant.)
+
+
+Token should have tag attribute.

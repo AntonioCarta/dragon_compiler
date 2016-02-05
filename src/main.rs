@@ -17,8 +17,8 @@ fn main() {
 
     let mut scanner = lexer::Scanner::new();
     let mut tok = scanner.scan();
-    while tok != lexer::Token::Eof {
-        println!("{:?}", tok);
+    while tok.tag != lexer::Tag::Eof {
+        println!("{:?}", tok.tag);
         tok = scanner.scan();
     }
 }
