@@ -5,17 +5,18 @@
 use lexer::{Scanner, Token, Tag, TokenInfo};
 use std;
 
-struct Parser {
+pub struct Parser {
     lookahead : Token,
     scanner : Scanner,
-    root : Option<Box<Program>>,
+    ast_root : Option<Box<Program>>,
 }
 
-trait ParseNode {
+pub trait ParseNode {
     fn parse(&mut Parser) -> Box<Self>;
 }
 
-struct Program {
+#[derive(PartialEq, Debug)]
+pub struct Program {
     block : Box<Block>,
 }
 
@@ -27,7 +28,8 @@ impl ParseNode for Program {
     }
 }
 
-struct Block {
+#[derive(PartialEq, Debug)]
+pub struct Block {
     decls : Vec<Box<Decl>>,
     stmts : Vec<Box<Statement>>,
 }
@@ -50,7 +52,8 @@ impl ParseNode for Block {
     }
 }
 
-struct Decl {
+#[derive(PartialEq, Debug)]
+pub struct Decl {
     typeId : Box<Type>,
     id : Box<String>,
 }
@@ -63,7 +66,7 @@ impl ParseNode for Decl {
                     let s = {
                         if let TokenInfo::Ide(x) = parser.shift_lookahead().info {
                             x
-                        } else { panic!() }
+                        } else { panic!("PWrong TokenInfo for Ide.") }
                     };
                     parser.match_lookahead(Tag::SemiColon);
                     Box::new(Decl {
@@ -75,7 +78,8 @@ impl ParseNode for Decl {
     }
 }
 
-enum Type {
+#[derive(PartialEq, Debug)]
+pub enum Type {
     Array(Box<Type>, Vec<i32>),
     Int,
     Float,
@@ -93,12 +97,13 @@ impl ParseNode for Type {
                 parser.shift_lookahead();
                 Box::new(Type::Float)
             },
-            _   => panic!()
+            _   => panic!("Wrong Token for Type")
         }
     }
 }
 
-enum Statement {
+#[derive(PartialEq, Debug)]
+pub enum Statement {
     Assign(Box<Loc>, Box<BoolExpr>),
     If(Box<BoolExpr>, Box<Statement>),
     IfElse(Box<BoolExpr>, Box<Statement>, Box<Statement>),
@@ -152,7 +157,8 @@ impl ParseNode for Statement {
     }
 }
 
-enum Loc {
+#[derive(PartialEq, Debug)]
+pub enum Loc {
     Index(String, Vec<Box<BoolExpr>>),
     Ide(String),
 }
@@ -185,12 +191,14 @@ impl ParseNode for Loc {
     }
 }
 
-enum Relop {
+#[derive(PartialEq, Debug)]
+pub enum Relop {
     Ge, Gr,
     Leq, Les,
 }
 
-enum BoolExpr {
+#[derive(PartialEq, Debug)]
+pub enum BoolExpr {
     Or(Box<BoolExpr>, Box<BoolExpr>),
     And(Box<BoolExpr>, Box<BoolExpr>),
     Eq(Box<BoolExpr>, Box<BoolExpr>),
@@ -259,7 +267,8 @@ impl BoolExpr {
     }
 }
 
-enum NumExpr {
+#[derive(PartialEq, Debug)]
+pub enum NumExpr {
     Add(Box<NumExpr>, Box<NumExpr>),
     Sub(Box<NumExpr>, Box<NumExpr>),
     Mul(Box<NumExpr>, Box<NumExpr>),
@@ -330,29 +339,35 @@ impl NumExpr {
             },
             Tag::True => Box::new(NumExpr::True),
             Tag::False => Box::new(NumExpr::False),
-            _ => panic!(),
+            Tag::LParen => {
+                parser.shift_lookahead();
+                let b = BoolExpr::parse(parser);
+                parser.match_lookahead(Tag::RParen);
+                Box::new(NumExpr::Expr(b))
+            }
+            _ => panic!("Wrong token for factor: {:?}", parser.lookahead.tag),
         }
     }
 }
 
 impl Parser {
-    fn new(mut scanner : Scanner) -> Self {
+    pub fn new(mut scanner : Scanner) -> Self {
         Parser {
             lookahead : scanner.scan(),
             scanner : scanner,
-            root : None,
+            ast_root : None,
         }
     }
 
-    fn parse(&mut self) {
-        self.root = Some(Program::parse(self));
+    pub fn parse(&mut self) {
+        self.ast_root = Some(Program::parse(self));
     }
 
     fn match_lookahead(&mut self, tag : Tag) -> Token {
         if self.lookahead.tag == tag {
             self.shift_lookahead()
         } else {
-            panic!()
+            panic!("Lookahead doesn't match: {:?}", self.lookahead.tag)
         }
     }
 

@@ -1,4 +1,5 @@
 /*
     Define module test for test files.
 */
-mod lexer_test;
+pub mod lexer_test;
+pub mod parser_test;

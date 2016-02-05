@@ -21,7 +21,7 @@ fn scan_string(s : String) -> String {
 
 #[test]
 fn basic_test() {
-    let s = "(1+3-x*y/543);";
+    let s = "(1+3-x*y/543);"; 
     let res = scan_string(String::from(s));
     assert!(res == String::from(s));
 

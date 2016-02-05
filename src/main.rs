@@ -1,7 +1,9 @@
-use lexer::Token;
 mod lexer;
 mod parser;
 mod test;
+
+use test::lexer_test;
+use test::parser_test;
 
 fn main() {
 /*
