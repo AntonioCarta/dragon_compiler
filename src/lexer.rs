@@ -26,6 +26,8 @@ pub enum Tag {
     Type,
     Ide,
     Num,
+    True,
+    False,
     //Real(String), /* Hash trait not implemented for float. */
 }
 
@@ -40,7 +42,6 @@ pub enum TokenInfo {
     Leq, Les,
     Equ, Neq,
 
-    Minus,
     Not,
 
     Add, Sub,
@@ -151,7 +152,7 @@ impl Scanner {
         }
         /* TODO: check for keywords. */
         let x = s.as_bytes();
-        if x == "If".as_bytes() {
+        if x == "if".as_bytes() {
             Token::new(Tag::If, TokenInfo::NoInfo)
         } else if x == "else".as_bytes() {
             Token::new(Tag::Else, TokenInfo::NoInfo)
@@ -159,6 +160,10 @@ impl Scanner {
             Token::new(Tag::While, TokenInfo::NoInfo)
         } else if x == "break".as_bytes() {
             Token::new(Tag::Break, TokenInfo::NoInfo)
+        } else if x == "True".as_bytes() {
+            Token::new(Tag::True, TokenInfo::NoInfo)
+        } else if x == "False".as_bytes() {
+            Token::new(Tag::False, TokenInfo::NoInfo)
         } else {
             Token::new(Tag::Ide, TokenInfo::Ide(s1))
         }

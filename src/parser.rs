@@ -72,7 +72,7 @@ impl ParseNode for Decl {
 }
 
 enum Type {
-    Array(Box<Type>, i32),
+    Array(Box<Type>, Vec<i32>),
     Int,
     Float,
 }
@@ -149,23 +149,185 @@ impl ParseNode for Statement {
 }
 
 enum Loc {
-    Index(Box<Loc>, Box<BoolExpr>),
-    ID(String),
+    Index(String, Vec<Box<BoolExpr>>),
+    Ide(String),
 }
 
 impl ParseNode for Loc {
     fn parse(parser : &mut Parser) -> Box<Self> {
-        unimplemented!();
+        if parser.lookahead.tag == Tag::Ide {
+            let inf = parser.shift_lookahead().info;
+            let mut v = Vec::new();
+            while parser.shift_lookahead().tag == Tag::LArrParen {
+                // TODO: n in First(BoolExpr)
+                if let TokenInfo::Num(_) = parser.lookahead.info {
+                    let b = BoolExpr::parse(parser);
+                    v.push(b);
+                }
+                parser.match_lookahead(Tag::RArrParen);
+            }
+            if let TokenInfo::Ide(s) = inf {
+                if v.len() > 0 {
+                    Box::new(Loc::Index(s, v))
+                } else {
+                    Box::new(Loc::Ide(s))
+                }
+            } else {
+                panic!()
+            }
+        } else {
+            panic!()
+        }
     }
 }
 
+enum Relop {
+    Ge, Gr,
+    Leq, Les,
+}
+
 enum BoolExpr {
-    BoolNotImplemented,
+    Or(Box<BoolExpr>, Box<BoolExpr>),
+    And(Box<BoolExpr>, Box<BoolExpr>),
+    Eq(Box<BoolExpr>, Box<BoolExpr>),
+    Neq(Box<BoolExpr>, Box<BoolExpr>),
+    Relop(Relop, Box<NumExpr>, Box<NumExpr>),
+    NumExpr(Box<NumExpr>),
 }
 
 impl ParseNode for BoolExpr {
     fn parse(parser : &mut Parser) -> Box<Self> {
-        unimplemented!();
+        let mut x = BoolExpr::join(parser);
+        while parser.lookahead.info == TokenInfo::Or {
+            parser.shift_lookahead();
+            x = Box::new(BoolExpr::Or(x, BoolExpr::join(parser)));
+        }
+        x
+    }
+}
+
+impl BoolExpr {
+    fn join(parser : &mut Parser) -> Box<Self> {
+        let mut x = BoolExpr::equality(parser);
+        while parser.lookahead.info == TokenInfo::And {
+            parser.shift_lookahead();
+            x = Box::new(BoolExpr::And(x, BoolExpr::equality(parser)));
+        }
+        x
+    }
+
+    fn equality(parser : &mut Parser) -> Box<Self> {
+        let mut x = BoolExpr::rel(parser);
+        while parser.lookahead.tag == Tag::RelOp {
+            if parser.lookahead.info == TokenInfo::Equ {
+                parser.shift_lookahead();
+                x = Box::new(BoolExpr::Eq(x, BoolExpr::rel(parser)));
+            } else if parser.lookahead.info == TokenInfo::Neq {
+                parser.shift_lookahead();
+                x = Box::new(BoolExpr::Neq(x, BoolExpr::rel(parser)));
+            }
+        }
+        x
+    }
+
+    fn rel(parser : &mut Parser) -> Box<Self> {
+        let x = NumExpr::parse(parser);
+
+        match parser.lookahead.info {
+            TokenInfo::Ge => {
+                parser.shift_lookahead();
+                Box::new(BoolExpr::Relop(Relop::Ge, x, NumExpr::parse(parser)))
+            }
+            TokenInfo::Gr => {
+                parser.shift_lookahead();
+                Box::new(BoolExpr::Relop(Relop::Gr, x, NumExpr::parse(parser)))
+            }
+            TokenInfo::Leq => {
+                parser.shift_lookahead();
+                Box::new(BoolExpr::Relop(Relop::Leq, x, NumExpr::parse(parser)))
+            }
+            TokenInfo::Les => {
+                parser.shift_lookahead();
+                Box::new(BoolExpr::Relop(Relop::Les, x, NumExpr::parse(parser)))
+            }
+            _ => Box::new(BoolExpr::NumExpr(x))
+        }
+    }
+}
+
+enum NumExpr {
+    Add(Box<NumExpr>, Box<NumExpr>),
+    Sub(Box<NumExpr>, Box<NumExpr>),
+    Mul(Box<NumExpr>, Box<NumExpr>),
+    Div(Box<NumExpr>, Box<NumExpr>),
+    Not(Box<NumExpr>),
+    Minus(Box<NumExpr>),
+    Expr(Box<BoolExpr>),
+    Loc(Box<Loc>),
+    Num(u32),
+    True,
+    False,
+}
+
+impl ParseNode for NumExpr {
+    fn parse(parser : &mut Parser) -> Box<Self> {
+        let mut x = NumExpr::term(parser);
+        loop {
+            match parser.lookahead.info {
+                TokenInfo::Add => {
+                    parser.shift_lookahead();
+                    x = Box::new(NumExpr::Add(x, NumExpr::term(parser)));
+                },
+                TokenInfo::Sub => {
+                    parser.shift_lookahead();
+                    x = Box::new(NumExpr::Sub(x, NumExpr::term(parser)));
+                },
+                _ => break,
+            }
+        }
+        x
+    }
+}
+
+impl NumExpr {
+    fn term(parser : &mut Parser) -> Box<Self> {
+        let mut x = NumExpr::unary(parser);
+        loop {
+            match parser.lookahead.info {
+                TokenInfo::Mul => {
+                    parser.shift_lookahead();
+                    x = Box::new(NumExpr::Mul(x, NumExpr::unary(parser)));
+                },
+                TokenInfo::Div => {
+                    parser.shift_lookahead();
+                    x = Box::new(NumExpr::Add(x, NumExpr::unary(parser)));
+                },
+                _ => break,
+            }
+        }
+        x
+    }
+
+    fn unary(parser : &mut Parser) -> Box<Self> {
+        match parser.lookahead.info {
+            TokenInfo::Sub => Box::new(NumExpr::Minus(NumExpr::factor(parser))),
+            TokenInfo::Not => Box::new(NumExpr::Not(NumExpr::factor(parser))),
+            _ => NumExpr::factor(parser),
+        }
+    }
+
+    fn factor(parser : &mut Parser) -> Box<Self> {
+        match parser.lookahead.tag {
+            Tag::Ide => Box::new(NumExpr::Loc(Loc::parse(parser))),
+            Tag::Num => {
+                if let TokenInfo::Num(x) = parser.lookahead.info {
+                    Box::new(NumExpr::Num(x))
+                } else { panic!() }
+            },
+            Tag::True => Box::new(NumExpr::True),
+            Tag::False => Box::new(NumExpr::False),
+            _ => panic!(),
+        }
     }
 }
 
@@ -179,7 +341,7 @@ impl Parser {
     }
 
     fn parse(&mut self) {
-        //self.root = Some(Box::New(Program::parse(&self.scanner)));
+        self.root = Some(Program::parse(self));
     }
 
     fn match_lookahead(&mut self, tag : Tag) -> Token {
@@ -191,7 +353,7 @@ impl Parser {
     }
 
     fn shift_lookahead(&mut self) -> Token {
-        let mut x = Token::new(Tag::Error, TokenInfo::NoInfo);
+        let x = Token::new(Tag::Error, TokenInfo::NoInfo);
         let out = std::mem::replace(&mut self.lookahead, x);
         self.lookahead = self.scanner.scan();
         out

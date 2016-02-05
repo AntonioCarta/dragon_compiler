@@ -15,11 +15,11 @@ fn scan_string(s : String) -> Vec<lexer::Token> {
 #[test]
 fn test_1() {
     let s = "(1+3);";
-    let res = scan_string(s);
+    //let res = scan_string(s);
     let sol = vec![
         Tag::LParen,
         Tag::Num,
-        Tag::NumOP,
+        Tag::NumOp,
         Tag::Num,
         Tag::RParen,
         Tag::SemiColon,
