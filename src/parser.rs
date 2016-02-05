@@ -60,11 +60,15 @@ impl ParseNode for Decl {
         let tid = Type::parse(parser);
         match parser.lookahead.tag  {
             Tag::Ide => {
-                    let t = parser.shift_lookahead();
+                    let s = {
+                        if let TokenInfo::Ide(x) = parser.shift_lookahead().info {
+                            x
+                        } else { panic!() }
+                    };
                     parser.match_lookahead(Tag::SemiColon);
                     Box::new(Decl {
                         typeId : tid,
-                        id : Box::new(String::new()), //BUG TODO: save correct string.
+                        id : Box::new(s), //BUG TODO: save correct string.
                     })},
             _ => panic!()//Syntax error
         }

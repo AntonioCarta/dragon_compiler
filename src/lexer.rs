@@ -1,6 +1,5 @@
-use std::collections::HashMap;
+use std::borrow::Cow;
 use std::io;
-use std::string::String;
 
 #[derive(PartialEq, Eq, Hash, Debug)]
 pub enum Tag {
@@ -64,6 +63,76 @@ impl Token {
         Token {
             tag : tag,
             info : info,
+        }
+    }
+
+    pub fn to_string(&self) -> Cow<str> {
+        match self.tag {
+            Tag::Eof => Cow::Borrowed("EOF"),
+            Tag::Error => Cow::Borrowed("error "), // Parsing error.
+            /* Reserved words. */
+            Tag::If => Cow::Borrowed("if "),
+            Tag::Else => Cow::Borrowed("else "),
+            Tag::While => Cow::Borrowed("while "),
+            Tag::Break => Cow::Borrowed("break "),
+            /* Separators. */
+            Tag::CloseBlock => Cow::Borrowed("}"),
+            Tag::OpenBlock => Cow::Borrowed("{"),
+            Tag::SemiColon => Cow::Borrowed(";"),
+            Tag::LArrParen => Cow::Borrowed("["),
+            Tag::RArrParen => Cow::Borrowed("]"),
+            Tag::LParen => Cow::Borrowed("("),
+            Tag::RParen => Cow::Borrowed(")"),
+            Tag::Assign => Cow::Borrowed("="),
+            /* Operators. */
+            Tag::BoolOp => {
+                match self.info {
+                    TokenInfo::And => Cow::Borrowed("&& "),
+                    TokenInfo::Or => Cow::Borrowed("|| "),
+                    _ => panic!("Wrong BoolOp info inside token."),
+                }
+            },
+            Tag::RelOp => {
+                match self.info {
+                    TokenInfo::Ge => Cow::Borrowed(">= "),
+                    TokenInfo::Gr => Cow::Borrowed("> "),
+                    TokenInfo::Leq => Cow::Borrowed("<= "),
+                    TokenInfo::Les => Cow::Borrowed("< "),
+                    TokenInfo::Equ => Cow::Borrowed("== "),
+                    TokenInfo::Neq => Cow::Borrowed("!= "),
+                    _ => panic!("Wrong RelOp info inside token."),
+                }
+            },
+            Tag::Unary => Cow::Borrowed("!"),
+            Tag::NumOp => {
+                match self.info {
+                    TokenInfo::Add => Cow::Borrowed("+ "),
+                    TokenInfo::Sub => Cow::Borrowed("- "),
+                    TokenInfo::Mul => Cow::Borrowed("* "),
+                    TokenInfo::Div => Cow::Borrowed("/ "),
+                    _ => panic!("Wrong NumOp info inside token."),
+                }
+            },
+            /* Identifiers, Types and Numbers. */
+            Tag::Type => {
+                match self.info {
+                    TokenInfo::Int => Cow::Borrowed("type(int) "),
+                    TokenInfo::Float => Cow::Borrowed("type(float) "),
+                    _ => panic!("Wrong Type info inside token."),
+                }
+            },
+            Tag::Ide => {
+                if let TokenInfo::Ide(ref x) = self.info {
+                    Cow::Owned(format!("{}", x))
+                } else { panic!("Wrong number info inside token.") }
+            },
+            Tag::Num => {
+                if let TokenInfo::Num(x) = self.info {
+                    Cow::Owned(format!("{}", x))
+                } else { panic!("Wrong number info inside token.") }
+            },
+            Tag::True => Cow::Borrowed("True "),
+            Tag::False => Cow::Borrowed("False "),
         }
     }
 }
