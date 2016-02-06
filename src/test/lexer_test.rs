@@ -21,12 +21,16 @@ fn scan_string(s : String) -> String {
 
 #[test]
 fn basic_test() {
-    let s = "(1+3-x*y/543);"; 
+    let s = "1+3-x*y/543;"; 
     let res = scan_string(String::from(s));
-    assert!(res == String::from(s));
+    assert_eq!(res, String::from(s));
 
     let s = "{if;while;()[]else;break}";
     let res = scan_string(String::from(s));
-    assert!(res == String::from(s));
+    assert_eq!(res, String::from(s));
+    
+    let s = "True||False&&x!b";
+    let res = scan_string(String::from(s));
+    assert_eq!(res, String::from(s));
 }
 }

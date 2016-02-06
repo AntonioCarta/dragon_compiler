@@ -8,7 +8,7 @@ use std;
 pub struct Parser {
     lookahead : Token,
     scanner : Scanner,
-    ast_root : Option<Box<Program>>,
+    pub ast_root : Option<Box<Program>>,
 }
 
 pub trait ParseNode {
@@ -17,7 +17,7 @@ pub trait ParseNode {
 
 #[derive(PartialEq, Debug)]
 pub struct Program {
-    block : Box<Block>,
+    pub block : Box<Block>,
 }
 
 impl ParseNode for Program {
@@ -31,8 +31,8 @@ impl ParseNode for Program {
 
 #[derive(PartialEq, Debug)]
 pub struct Block {
-    decls : Vec<Box<Decl>>,
-    stmts : Vec<Box<Statement>>,
+    pub decls : Vec<Box<Decl>>,
+    pub stmts : Vec<Box<Statement>>,
 }
 
 //TODO: Parse for Block
@@ -42,11 +42,14 @@ impl ParseNode for Block {
         let mut stmts = Vec::new();
         //block -> decls stmts
         parser.match_lookahead(Tag::OpenBlock);
-        match parser.lookahead.tag {
-            // NOTE: this way we can mix stmts and declarations.
-            Tag::Type => decls.push(Decl::parse(parser)),
-            _              => stmts.push(Statement::parse(parser)),
-        };
+        loop {
+            match parser.lookahead.tag {
+                // NOTE: this way we can mix stmts and declarations.
+                Tag::Type => decls.push(Decl::parse(parser)),
+                Tag::CloseBlock => break,
+                _              => stmts.push(Statement::parse(parser)),
+            };
+        }
         parser.match_lookahead(Tag::CloseBlock);
         Box::new(Block {
             decls : decls,
@@ -57,8 +60,8 @@ impl ParseNode for Block {
 
 #[derive(PartialEq, Debug)]
 pub struct Decl {
-    type_id : Box<Type>,
-    id : Box<String>,
+    pub type_id : Box<Type>,
+    pub id : Box<String>,
 }
 
 impl ParseNode for Decl {
@@ -362,8 +365,16 @@ impl NumExpr {
 
     fn unary(parser : &mut Parser) -> Box<Self> {
         match parser.lookahead.info {
-            TokenInfo::Sub => Box::new(NumExpr::Minus(NumExpr::unary(parser))), // unary -> -unary
-            TokenInfo::Not => Box::new(NumExpr::Not(NumExpr::unary(parser))),   // unary -> !unary
+            TokenInfo::Sub => {
+                // unary -> -unary
+                parser.shift_lookahead();
+                Box::new(NumExpr::Minus(NumExpr::unary(parser)))
+            }, 
+            TokenInfo::Not => {
+                // unary -> !unary
+                parser.shift_lookahead();
+                Box::new(NumExpr::Not(NumExpr::unary(parser)))
+            },   
             _ => NumExpr::factor(parser), // unary -> factor
         }
     }
