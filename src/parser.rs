@@ -70,7 +70,7 @@ impl ParseNode for Decl {
                     let s = {
                         if let TokenInfo::Ide(x) = parser.shift_lookahead().info {
                             x
-                        } else { panic!("Wrong TokenInfo for Ide.") }
+                        } else { unreachable!("Wrong TokenInfo for Ide.") }
                     };
                     parser.match_lookahead(Tag::SemiColon);
                     Box::new(Decl {
@@ -96,7 +96,7 @@ impl ParseNode for Type {
                 let base = match parser.shift_lookahead().info {
                     TokenInfo::Int   => Box::new(Type::Int),
                     TokenInfo::Float => Box::new(Type::Float),
-                    _ => panic!("Wrong info for Type token.")
+                    _ => unreachable!("Wrong info for Type token.")
                 };
                 let mut v = Vec::new();                
                 while parser.lookahead.tag == Tag::LArrParen {
@@ -105,7 +105,7 @@ impl ParseNode for Type {
                     let n = parser.match_lookahead(Tag::Num);
                     if let TokenInfo::Num(x) = n.info {
                         v.push(x);
-                    } else { panic!("Wrong info for num inside token"); }
+                    } else { unreachable!("Wrong info for num inside token"); }
                     parser.match_lookahead(Tag::RArrParen);
                 }
                 if v.len() == 0 {
@@ -193,7 +193,8 @@ impl ParseNode for Loc {
         if parser.lookahead.tag == Tag::Ide {
             let inf = parser.shift_lookahead().info;
             let mut v = Vec::new();
-            while parser.shift_lookahead().tag == Tag::LArrParen {
+            while parser.lookahead.tag == Tag::LArrParen {
+                parser.shift_lookahead();
                 let b = BoolExpr::parse(parser);
                 v.push(b);
                 parser.match_lookahead(Tag::RArrParen);
@@ -207,7 +208,7 @@ impl ParseNode for Loc {
                     Box::new(Loc::Ide(s))
                 }
             } else {
-                panic!("Wrong token info inside identifier.")
+                unreachable!("Wrong token info inside identifier.")
             }
         } else {
             panic!("Expected ide inside lvalue. Found: {:?}", parser.lookahead.tag)
@@ -370,19 +371,25 @@ impl NumExpr {
     fn factor(parser : &mut Parser) -> Box<Self> {
         match parser.lookahead.tag {
             // factor -> loc 
-            Tag::Ide => Box::new(NumExpr::Loc(Loc::parse(parser))), 
-            // factor -> num
+            Tag::Ide => Box::new(NumExpr::Loc(Loc::parse(parser))),             
             Tag::Num => {
-                if let TokenInfo::Num(x) = parser.lookahead.info {
+                // factor -> num
+                if let TokenInfo::Num(x) = parser.shift_lookahead().info {
                     Box::new(NumExpr::Num(x))
-                } else { panic!("Wrong token info for num.") }
-            },
-            // factor -> True
-            Tag::True => Box::new(NumExpr::True),
-            // factor -> False
-            Tag::False => Box::new(NumExpr::False),
-            // factor -> (bool)
+                } else { unreachable!("Wrong token info for num.") }
+            },            
+            Tag::True => {
+                // factor -> True
+                parser.shift_lookahead();
+                Box::new(NumExpr::True)
+            }, 
+            Tag::False => {
+                // factor -> False
+                parser.shift_lookahead();
+                Box::new(NumExpr::False)
+            },            
             Tag::LParen => {
+                // factor -> (bool)
                 parser.shift_lookahead();
                 let b = BoolExpr::parse(parser);
                 parser.match_lookahead(Tag::RParen);
