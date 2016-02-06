@@ -22,7 +22,8 @@ pub struct Program {
 
 impl ParseNode for Program {
     fn parse(parser : &mut Parser) -> Box<Self> {
-        Box::new(Program {
+        //program -> block
+        Box::new(Program {            
             block : Block::parse(parser),
         })
     }
@@ -39,12 +40,14 @@ impl ParseNode for Block {
     fn parse(parser : &mut Parser) -> Box<Self> {
         let mut decls = Vec::new();
         let mut stmts = Vec::new();
-        parser.match_lookahead(Tag::LArrParen);
+        //block -> decls stmts
+        parser.match_lookahead(Tag::OpenBlock);
         match parser.lookahead.tag {
+            // NOTE: this way we can mix stmts and declarations.
             Tag::Type => decls.push(Decl::parse(parser)),
             _              => stmts.push(Statement::parse(parser)),
         };
-        parser.match_lookahead(Tag::RArrParen);
+        parser.match_lookahead(Tag::CloseBlock);
         Box::new(Block {
             decls : decls,
             stmts : stmts,
@@ -54,48 +57,64 @@ impl ParseNode for Block {
 
 #[derive(PartialEq, Debug)]
 pub struct Decl {
-    typeId : Box<Type>,
+    type_id : Box<Type>,
     id : Box<String>,
 }
 
 impl ParseNode for Decl {
     fn parse(parser : &mut Parser) -> Box<Self> {
+        //decl -> type ID;
         let tid = Type::parse(parser);
         match parser.lookahead.tag  {
             Tag::Ide => {
                     let s = {
                         if let TokenInfo::Ide(x) = parser.shift_lookahead().info {
                             x
-                        } else { panic!("PWrong TokenInfo for Ide.") }
+                        } else { panic!("Wrong TokenInfo for Ide.") }
                     };
                     parser.match_lookahead(Tag::SemiColon);
                     Box::new(Decl {
-                        typeId : tid,
-                        id : Box::new(s), //BUG TODO: save correct string.
+                        type_id : tid,
+                        id : Box::new(s), 
                     })},
-            _ => panic!()//Syntax error
+            _ => panic!("Expecting identifier after type inside a declaration.")
         }
     }
 }
 
 #[derive(PartialEq, Debug)]
 pub enum Type {
-    Array(Box<Type>, Vec<i32>),
+    Array(Box<Type>, Vec<u32>),
     Int,
     Float,
 }
 
-//TODO: just parsing the basic case.
 impl ParseNode for Type {
     fn parse(parser : &mut Parser) -> Box<Self> {
-        match (&parser.lookahead.tag, &parser.lookahead.info) {
-            (&Tag::Type, &TokenInfo::Int) =>{
-                parser.shift_lookahead();
-                Box::new(Type::Int)
-            },
-            (&Tag::Type, &TokenInfo::Float) => {
-                parser.shift_lookahead();
-                Box::new(Type::Float)
+        match parser.lookahead.tag {
+            Tag::Type =>{
+                let base = match parser.shift_lookahead().info {
+                    TokenInfo::Int   => Box::new(Type::Int),
+                    TokenInfo::Float => Box::new(Type::Float),
+                    _ => panic!("Wrong info for Type token.")
+                };
+                let mut v = Vec::new();                
+                while parser.lookahead.tag == Tag::LArrParen {
+                    // type -> type[num]
+                    parser.shift_lookahead();
+                    let n = parser.match_lookahead(Tag::Num);
+                    if let TokenInfo::Num(x) = n.info {
+                        v.push(x);
+                    } else { panic!("Wrong info for num inside token"); }
+                    parser.match_lookahead(Tag::RArrParen);
+                }
+                if v.len() == 0 {
+                    // type -> basic
+                    base
+                } else {
+                    // type -> type[num]
+                    Box::new(Type::Array(base, v))
+                }
             },
             _   => panic!("Wrong Token for Type")
         }
@@ -116,6 +135,7 @@ impl ParseNode for Statement {
     fn parse(parser : &mut Parser) -> Box<Self> {
         match parser.lookahead.tag {
             Tag::Ide => {
+                // stmt -> loc = bool
                 let l = Loc::parse(parser);
                 parser.match_lookahead(Tag::Assign);
                 let b = BoolExpr::parse(parser);
@@ -129,14 +149,17 @@ impl ParseNode for Statement {
                 parser.match_lookahead(Tag::RParen);
                 let s = Statement::parse(parser);
                 if parser.lookahead.tag == Tag::Else {
+                    // stmt -> if (bool) stmt else stmt
                     parser.shift_lookahead();
                     let s2 = Statement::parse(parser);
                     Box::new(Statement::IfElse(b, s, s2))
                 } else {
+                    // stmt -> if (bool) stmt
                     Box::new(Statement::If(b, s))
                 }
             },
             Tag::While => {
+                // stmt -> while (bool) stmt
                 parser.shift_lookahead();
                 parser.match_lookahead(Tag::LParen);
                 let b = BoolExpr::parse(parser);
@@ -145,14 +168,16 @@ impl ParseNode for Statement {
                 Box::new(Statement::While(b, s))
             },
             Tag::Break => {
+                // stmt -> break;
                 parser.shift_lookahead();
                 parser.match_lookahead(Tag::SemiColon);
                 Box::new(Statement::Break)
             },
             Tag::LArrParen => {
+                // stmt -> block
                 Box::new(Statement::BlockStmt(Block::parse(parser)))
             }
-            _ => panic!()
+            _ => panic!("Expected a valid statement.")
         }
     }
 }
@@ -169,24 +194,23 @@ impl ParseNode for Loc {
             let inf = parser.shift_lookahead().info;
             let mut v = Vec::new();
             while parser.shift_lookahead().tag == Tag::LArrParen {
-                // TODO: n in First(BoolExpr)
-                if let TokenInfo::Num(_) = parser.lookahead.info {
-                    let b = BoolExpr::parse(parser);
-                    v.push(b);
-                }
+                let b = BoolExpr::parse(parser);
+                v.push(b);
                 parser.match_lookahead(Tag::RArrParen);
             }
             if let TokenInfo::Ide(s) = inf {
                 if v.len() > 0 {
+                    // loc -> loc[bool]
                     Box::new(Loc::Index(s, v))
                 } else {
+                    // loc -> ID
                     Box::new(Loc::Ide(s))
                 }
             } else {
-                panic!()
+                panic!("Wrong token info inside identifier.")
             }
         } else {
-            panic!()
+            panic!("Expected ide inside lvalue. Found: {:?}", parser.lookahead.tag)
         }
     }
 }
@@ -209,8 +233,10 @@ pub enum BoolExpr {
 
 impl ParseNode for BoolExpr {
     fn parse(parser : &mut Parser) -> Box<Self> {
+        // bool -> join
         let mut x = BoolExpr::join(parser);
         while parser.lookahead.info == TokenInfo::Or {
+            // bool -> join || bool
             parser.shift_lookahead();
             x = Box::new(BoolExpr::Or(x, BoolExpr::join(parser)));
         }
@@ -220,8 +246,10 @@ impl ParseNode for BoolExpr {
 
 impl BoolExpr {
     fn join(parser : &mut Parser) -> Box<Self> {
+        // join -> equ
         let mut x = BoolExpr::equality(parser);
         while parser.lookahead.info == TokenInfo::And {
+            // join -> join && equality
             parser.shift_lookahead();
             x = Box::new(BoolExpr::And(x, BoolExpr::equality(parser)));
         }
@@ -229,12 +257,15 @@ impl BoolExpr {
     }
 
     fn equality(parser : &mut Parser) -> Box<Self> {
+        // equ -> rel
         let mut x = BoolExpr::rel(parser);
         while parser.lookahead.tag == Tag::RelOp {
             if parser.lookahead.info == TokenInfo::Equ {
+                // equ -> rel == equ
                 parser.shift_lookahead();
                 x = Box::new(BoolExpr::Eq(x, BoolExpr::rel(parser)));
             } else if parser.lookahead.info == TokenInfo::Neq {
+                // equ -> rel != equ
                 parser.shift_lookahead();
                 x = Box::new(BoolExpr::Neq(x, BoolExpr::rel(parser)));
             }
@@ -244,25 +275,28 @@ impl BoolExpr {
 
     fn rel(parser : &mut Parser) -> Box<Self> {
         let x = NumExpr::parse(parser);
-
         match parser.lookahead.info {
             TokenInfo::Ge => {
+                // rel -> expr >= expr
                 parser.shift_lookahead();
                 Box::new(BoolExpr::Relop(Relop::Ge, x, NumExpr::parse(parser)))
             }
             TokenInfo::Gr => {
+                // rel -> expr > expr
                 parser.shift_lookahead();
                 Box::new(BoolExpr::Relop(Relop::Gr, x, NumExpr::parse(parser)))
             }
             TokenInfo::Leq => {
+                // rel -> expr <= expr
                 parser.shift_lookahead();
                 Box::new(BoolExpr::Relop(Relop::Leq, x, NumExpr::parse(parser)))
             }
             TokenInfo::Les => {
+                // rel -> expr < expr
                 parser.shift_lookahead();
                 Box::new(BoolExpr::Relop(Relop::Les, x, NumExpr::parse(parser)))
             }
-            _ => Box::new(BoolExpr::NumExpr(x))
+            _ => Box::new(BoolExpr::NumExpr(x)) // rel -> expr
         }
     }
 }
@@ -288,14 +322,16 @@ impl ParseNode for NumExpr {
         loop {
             match parser.lookahead.info {
                 TokenInfo::Add => {
+                    // expr -> term + expr
                     parser.shift_lookahead();
                     x = Box::new(NumExpr::Add(x, NumExpr::term(parser)));
                 },
                 TokenInfo::Sub => {
+                    // expr -> term - expr
                     parser.shift_lookahead();
                     x = Box::new(NumExpr::Sub(x, NumExpr::term(parser)));
                 },
-                _ => break,
+                _ => break, // expr -> term
             }
         }
         x
@@ -308,14 +344,16 @@ impl NumExpr {
         loop {
             match parser.lookahead.info {
                 TokenInfo::Mul => {
+                    // term -> unary * term
                     parser.shift_lookahead();
                     x = Box::new(NumExpr::Mul(x, NumExpr::unary(parser)));
                 },
                 TokenInfo::Div => {
+                    // term -> unary / term
                     parser.shift_lookahead();
-                    x = Box::new(NumExpr::Add(x, NumExpr::unary(parser)));
+                    x = Box::new(NumExpr::Div(x, NumExpr::unary(parser)));
                 },
-                _ => break,
+                _ => break, // term -> unary
             }
         }
         x
@@ -323,28 +361,33 @@ impl NumExpr {
 
     fn unary(parser : &mut Parser) -> Box<Self> {
         match parser.lookahead.info {
-            TokenInfo::Sub => Box::new(NumExpr::Minus(NumExpr::factor(parser))),
-            TokenInfo::Not => Box::new(NumExpr::Not(NumExpr::factor(parser))),
-            _ => NumExpr::factor(parser),
+            TokenInfo::Sub => Box::new(NumExpr::Minus(NumExpr::unary(parser))), // unary -> -unary
+            TokenInfo::Not => Box::new(NumExpr::Not(NumExpr::unary(parser))),   // unary -> !unary
+            _ => NumExpr::factor(parser), // unary -> factor
         }
     }
 
     fn factor(parser : &mut Parser) -> Box<Self> {
         match parser.lookahead.tag {
-            Tag::Ide => Box::new(NumExpr::Loc(Loc::parse(parser))),
+            // factor -> loc 
+            Tag::Ide => Box::new(NumExpr::Loc(Loc::parse(parser))), 
+            // factor -> num
             Tag::Num => {
                 if let TokenInfo::Num(x) = parser.lookahead.info {
                     Box::new(NumExpr::Num(x))
-                } else { panic!() }
+                } else { panic!("Wrong token info for num.") }
             },
+            // factor -> True
             Tag::True => Box::new(NumExpr::True),
+            // factor -> False
             Tag::False => Box::new(NumExpr::False),
+            // factor -> (bool)
             Tag::LParen => {
                 parser.shift_lookahead();
                 let b = BoolExpr::parse(parser);
                 parser.match_lookahead(Tag::RParen);
                 Box::new(NumExpr::Expr(b))
-            }
+            },
             _ => panic!("Wrong token for factor: {:?}", parser.lookahead.tag),
         }
     }
@@ -363,11 +406,19 @@ impl Parser {
         self.ast_root = Some(Program::parse(self));
     }
 
+    fn match_lookahead_msg(&mut self, tag : Tag, error_msg : &str) -> Token {
+        if self.lookahead.tag == tag {
+            self.shift_lookahead()
+        } else {
+            panic!("{} found: {:?}", error_msg, self.lookahead.tag)
+        }
+    }
+
     fn match_lookahead(&mut self, tag : Tag) -> Token {
         if self.lookahead.tag == tag {
             self.shift_lookahead()
         } else {
-            panic!("Lookahead doesn't match: {:?}", self.lookahead.tag)
+            panic!("Expected {:?}. Found: {:?}", tag, (&self.lookahead.tag, &self.lookahead.info))
         }
     }
 

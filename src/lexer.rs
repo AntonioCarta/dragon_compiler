@@ -30,7 +30,7 @@ pub enum Tag {
     //Real(String), /* Hash trait not implemented for float. */
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 pub enum TokenInfo {
     NoInfo,
 

@@ -17,7 +17,7 @@ mod test {
 
     #[test]
     fn basic_test() {
-        let s = "(1+3-x*y/543);";
+        let s = "1+3-x*y/543";
         let ast = Box::new(BoolExpr::NumExpr(
             Box::new(NumExpr::Add(
                 Box::new(NumExpr::Num(1)),
