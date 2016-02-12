@@ -1,6 +1,7 @@
 mod lexer;
 mod parser;
 mod test;
+mod intermediate_code;
 
 fn main() {
 /*

@@ -137,7 +137,7 @@ impl Token {
         }
     }
 }
-
+ 
 pub struct Scanner {
     buffer : String,
     read_from_stdin : bool,

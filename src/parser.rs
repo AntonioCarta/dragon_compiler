@@ -1,6 +1,5 @@
 /*
     Parser for imperative language.
-    Implement Drop for parse tree without unbounded recursion.
 */
 use lexer::{Scanner, Token, Tag, TokenInfo};
 use std;
@@ -12,7 +11,7 @@ pub struct Parser {
 }
 
 pub trait ParseNode {
-    fn parse(&mut Parser) -> Box<Self>;
+    fn parse(& mut Parser) -> Box<Self>;
 }
 
 #[derive(PartialEq, Debug)]
@@ -35,7 +34,6 @@ pub struct Block {
     pub stmts : Vec<Box<Statement>>,
 }
 
-//TODO: Parse for Block
 impl ParseNode for Block {
     fn parse(parser : &mut Parser) -> Box<Self> {
         let mut decls = Vec::new();
@@ -65,7 +63,7 @@ pub struct Decl {
 }
 
 impl ParseNode for Decl {
-    fn parse(parser : &mut Parser) -> Box<Self> {
+    fn parse(parser : & mut Parser) -> Box<Self> {
         //decl -> type ID;
         let tid = Type::parse(parser);
         match parser.lookahead.tag  {
