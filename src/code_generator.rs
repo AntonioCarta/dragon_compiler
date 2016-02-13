@@ -18,8 +18,15 @@ enum OpCode {
     JmpNZ,
 }
 
+#[derive(PartialEq, Debug)]
 struct Address {
     place : i32,
+}
+
+impl Address {
+    fn null_address() -> Self {
+        Address { place : 0, }
+    }
 }
 
 struct AddressCode {

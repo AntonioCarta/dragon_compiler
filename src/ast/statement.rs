@@ -1,8 +1,7 @@
 use parser::{ParseNode, Parser};
 use lexer::{TokenInfo, Tag};
-use ast::expression::BoolExpr;
+use ast::expression::{BoolExpr, Loc};
 use code_generator::CodeGenerator;
-use symbol_table::{IdeInfo};
 
 #[derive(PartialEq, Debug)]
 pub struct Program {
@@ -199,42 +198,4 @@ impl ParseNode for Statement {
     fn generate_code(&self, code_gen : &mut CodeGenerator) {
         unimplemented!()
     }    
-}
-
-#[derive(PartialEq, Debug)]
-pub enum Loc {
-    Index(String, Vec<Box<BoolExpr>>),
-    Ide(String),
-}
-
-impl ParseNode for Loc {
-    fn parse(parser : &mut Parser) -> Box<Self> {
-        if parser.lookahead.tag == Tag::Ide {
-            let inf = parser.shift_lookahead().info;
-            let mut v = Vec::new();
-            while parser.lookahead.tag == Tag::LArrParen {
-                parser.shift_lookahead();
-                let b = BoolExpr::parse(parser);
-                v.push(b);
-                parser.match_lookahead(Tag::RArrParen);
-            }
-            if let TokenInfo::Ide(s) = inf {
-                if v.len() > 0 {
-                    // loc -> loc[bool]
-                    Box::new(Loc::Index(s, v))
-                } else {
-                    // loc -> ID
-                    Box::new(Loc::Ide(s))
-                }
-            } else {
-                unreachable!("Wrong token info inside identifier.")
-            }
-        } else {
-            panic!("Expected ide inside lvalue. Found: {:?}", parser.lookahead.tag)
-        }
-    }
-
-    fn generate_code(&self, code_gen : &mut CodeGenerator) {
-        unimplemented!()
-    }
 }
