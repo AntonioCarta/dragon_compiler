@@ -67,6 +67,7 @@ impl Token {
     }
 
     // Just for debugging purpose.
+    #[allow(dead_code)]
     pub fn to_cow_string(&self) -> Cow<str> {
         match self.tag {
             Tag::Eof => Cow::Borrowed("EOF"),
@@ -139,19 +140,17 @@ impl Token {
 }
  
 pub struct Scanner {
-    buffer : String,
-    read_from_stdin : bool,
+    buffer : String,    
     lookahead : char,
 }
 
 impl Scanner {
     pub fn new() -> Scanner {
         let mut s = String::new();
-        io::stdin().read_line(&mut s);
+        io::stdin().read_line(&mut s).ok();
         println!("{}", s);
         Scanner {
             buffer : s,
-            read_from_stdin : true,
             lookahead : ' ',
         }
     }
@@ -160,7 +159,6 @@ impl Scanner {
         println!("{}", s);
         Scanner {
             buffer : s,
-            read_from_stdin : false,
             lookahead : ' ',
         }
     }
