@@ -1,8 +1,10 @@
 use std::collections::HashMap;
 use ast::statement::Type;
+use code_generator::Address;
 
 pub struct IdeInfo {
     typeinfo : Type,   
+    address  : Address,
 }
 
 pub struct SymbolTable {
@@ -23,9 +25,10 @@ impl SymbolTable {
         self.frame_stack.pop();
     }
     
-    pub fn put(&mut self, name : String, typeinfo : Type) {
+    pub fn put(&mut self, name : String, typeinfo : Type, address : Address) {
         let info = IdeInfo {
             typeinfo : typeinfo,
+            address  : address,
         };
         let n = self.frame_stack.len();
         self.frame_stack[n-1].insert(name, info);

@@ -3,7 +3,6 @@
 */
 use lexer::{Scanner, Token, Tag, TokenInfo};
 use ast::statement::Program;
-use code_generator::CodeGenerator;
 use std;
 
 pub struct Parser {

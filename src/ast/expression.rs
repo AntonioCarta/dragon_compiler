@@ -3,7 +3,7 @@ use parser::{ParseNode, Parser};
 use lexer::{TokenInfo, Tag};
 
 pub struct ExprAttributes {
-    place  : Address,
+    pub place  : Address,
 }
 
 impl ExprAttributes {
@@ -32,7 +32,7 @@ pub enum BoolExpr {
 
 // BUG: implement equality
 impl BoolExpr {
-    fn generate_code(&self, code_gen : &mut CodeGenerator) -> ExprAttributes {
+    pub fn generate_code(&self, code_gen : &mut CodeGenerator) -> ExprAttributes {
         match self {
             &BoolExpr::Or(ref e1, ref e2) => {
                 let a1 = e1.generate_code(code_gen);
@@ -222,19 +222,17 @@ impl NumExpr {
             &NumExpr::Num(x) => {
                 //BUG: how do we treat constants?
                 let tmp = code_gen.new_temp();
-                code_gen.emit(OpCode::Mov, tmp, tmp, x);
+                //code_gen.emit(OpCode::Mov, tmp, tmp, x);
                 ExprAttributes::new(tmp)    
             },
             &NumExpr::True => {
                 //BUG: how do we treat constants?
                 let tmp = code_gen.new_temp();
-                code_gen.emit(OpCode::Add, tmp, a1.place, a2.place);
                 ExprAttributes::new(tmp)    
             },
             &NumExpr::False => {
                 //BUG: how do we treat constants?
                 let tmp = code_gen.new_temp();
-                code_gen.emit(OpCode::Add, tmp, a1.place, a2.place);
                 ExprAttributes::new(tmp)    
             },
         }
@@ -337,6 +335,12 @@ impl NumExpr {
 pub enum Loc {
     Index(String, Vec<Box<BoolExpr>>),
     Ide(String),
+}
+
+impl Loc {
+    pub fn generate_code(&self, code_gen : &mut CodeGenerator) -> ExprAttributes {
+        unimplemented!()
+    }
 }
 
 impl ParseNode for Loc {

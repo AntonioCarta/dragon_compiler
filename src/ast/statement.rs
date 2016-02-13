@@ -1,11 +1,23 @@
 use parser::{ParseNode, Parser};
 use lexer::{TokenInfo, Tag};
 use ast::expression::{BoolExpr, Loc};
-use code_generator::CodeGenerator;
+use code_generator::{CodeGenerator, Label, OpCode, AddressCode, Address};
+
+struct StatementAttributes {
+    lblbegin  : Label,
+    lblafter  : Label,
+    backpatch : Vec<AddressCode>,
+}
 
 #[derive(PartialEq, Debug)]
 pub struct Program {
     pub block : Box<Block>,    
+}
+
+impl Program {
+    pub fn generate_code(&self, code_gen : &mut CodeGenerator) {
+        self.block.generate_code(code_gen);
+    }
 }
 
 impl ParseNode for Program {
@@ -46,7 +58,8 @@ impl ParseNode for Block {
 }
 
 impl Block {
-    fn generate_code(&self, code_gen : &mut CodeGenerator) {
+    fn generate_code(&self, code_gen : &mut CodeGenerator) -> StatementAttributes {
+        let lblbegin = code_gen.emit_label();
         code_gen.sym_table.push_frame();
         for d in &self.decls {
             d.generate_code(code_gen);
@@ -55,6 +68,12 @@ impl Block {
             v.generate_code(code_gen);
         }
         code_gen.sym_table.pop_frame();
+        let lblafter = code_gen.emit_label();
+        StatementAttributes {
+            lblbegin  : lblbegin,
+            lblafter  : lblafter,
+            backpatch : Vec::new(),
+        }
     }
 }
 
@@ -87,7 +106,8 @@ impl ParseNode for Decl {
 
 impl Decl {
     fn generate_code(&self, code_gen : &mut CodeGenerator) {
-        code_gen.sym_table.put((*self.id).clone(), (*self.type_id).clone());
+        let addr = code_gen.new_temp();
+        code_gen.sym_table.put((*self.id).clone(), (*self.type_id).clone(), addr);
     }
 }
 
@@ -140,6 +160,59 @@ pub enum Statement {
     BlockStmt(Box<Block>),
 }
 
+impl Statement {
+    fn generate_code(&self, code_gen : &mut CodeGenerator) -> StatementAttributes {
+        let lblbegin = code_gen.emit_label();                               
+        match self {
+            &Statement::Assign(ref l, ref be) => {
+                let place = l.generate_code(code_gen);
+                let battr = be.generate_code(code_gen);
+                code_gen.emit(OpCode::Mov, place.place, battr.place, battr.place);
+            },
+            &Statement::If(ref be, ref stmt) => {
+                let battr = be.generate_code(code_gen);
+                let instr = code_gen.emit_jump(OpCode::JmpZ, lblbegin, Address::null_address());
+                stmt.generate_code(code_gen);
+                let lblafter = code_gen.emit_label();
+                code_gen.patch_jump(instr, lblafter);
+            },
+            &Statement::IfElse(ref be, ref st1, ref st2) => {
+                let battr = be.generate_code(code_gen);
+                let instr = code_gen.emit_jump(OpCode::JmpZ, lblbegin, battr.place);
+                st1.generate_code(code_gen);
+                let jmpendif = code_gen.emit_jump(OpCode::Goto, lblbegin, Address::null_address());
+                let lblelse = code_gen.emit_label();
+                code_gen.patch_jump(instr, lblelse);
+                st2.generate_code(code_gen);
+                let lblendelse = code_gen.emit_label();
+                code_gen.patch_jump(jmpendif, lblendelse);              
+            },
+            &Statement::While(ref be, ref stmt) => {
+                let battr = be.generate_code(code_gen);
+                let jmp = code_gen.emit_jump(OpCode::JmpZ, lblbegin, battr.place);
+                stmt.generate_code(code_gen);
+                code_gen.emit_jump(OpCode::Goto, lblbegin, Address::null_address());
+                let lblafter = code_gen.emit_label();
+                code_gen.patch_jump(jmp, lblafter);
+            },
+            &Statement::Break => {
+                // BUG: Break is not working right now.
+                let addr = code_gen.emit_jump(OpCode::Goto, lblbegin, Address::null_address());
+                let lblafter = code_gen.emit_label();
+            },
+            &Statement::BlockStmt(ref block) => {
+                block.generate_code(code_gen);    
+            },
+        }
+        
+        StatementAttributes {
+            lblbegin  : lblbegin,
+            lblafter  : code_gen.emit_label(),
+            backpatch : Vec::new(),
+        }
+    }
+}
+
 impl ParseNode for Statement {
     fn parse(parser : &mut Parser) -> Box<Self> {
         match parser.lookahead.tag {
@@ -189,10 +262,4 @@ impl ParseNode for Statement {
             _ => panic!("Expected a valid statement.")
         }
     }    
-}
-
-impl Statement {
-    fn generate_code(&self, code_gen : &mut CodeGenerator) {
-        unimplemented!();
-    }
 }
