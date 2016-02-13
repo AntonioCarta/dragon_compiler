@@ -1,6 +1,18 @@
-use code_generator::CodeGenerator;
+use code_generator::{CodeGenerator, Address, OpCode};
 use parser::{ParseNode, Parser};
 use lexer::{TokenInfo, Tag};
+
+pub struct ExprAttributes {
+    place  : Address,
+}
+
+impl ExprAttributes {
+    fn new(addr : Address) -> Self {
+        ExprAttributes {
+            place : addr,
+        }
+    }
+}
 
 #[derive(PartialEq, Debug)]
 pub enum Relop {
@@ -18,6 +30,58 @@ pub enum BoolExpr {
     NumExpr(Box<NumExpr>),
 }
 
+// BUG: implement equality
+impl BoolExpr {
+    fn generate_code(&self, code_gen : &mut CodeGenerator) -> ExprAttributes {
+        match self {
+            &BoolExpr::Or(ref e1, ref e2) => {
+                let a1 = e1.generate_code(code_gen);
+                let a2 = e2.generate_code(code_gen);
+                let tmp = code_gen.new_temp();
+                code_gen.emit(OpCode::Or, tmp, a1.place, a2.place);
+                ExprAttributes::new(tmp)
+            },
+            &BoolExpr::And(ref e1, ref e2) => {
+                let a1 = e1.generate_code(code_gen);
+                let a2 = e2.generate_code(code_gen);
+                let tmp = code_gen.new_temp();
+                code_gen.emit(OpCode::And, tmp, a1.place, a2.place);
+                ExprAttributes::new(tmp)
+            },
+            &BoolExpr::Eq(ref e1, ref e2) => {
+                //BUG
+                unimplemented!();
+                let a1 = e1.generate_code(code_gen);
+                let a2 = e2.generate_code(code_gen);
+                let tmp = code_gen.new_temp();
+                code_gen.emit(OpCode::Add, tmp, a1.place, a2.place);
+                ExprAttributes::new(tmp)
+            },
+            &BoolExpr::Neq(ref e1, ref e2) => {
+                //BUG
+                unimplemented!();
+                let a1 = e1.generate_code(code_gen);
+                let a2 = e2.generate_code(code_gen);
+                let tmp = code_gen.new_temp();
+                code_gen.emit(OpCode::Add, tmp, a1.place, a2.place);
+                ExprAttributes::new(tmp)
+            },
+            &BoolExpr::Relop(ref rel, ref e1, ref e2) => {
+                //BUG
+                unimplemented!();
+                let a1 = e1.generate_code(code_gen);
+                let a2 = e2.generate_code(code_gen);
+                let tmp = code_gen.new_temp();
+                code_gen.emit(OpCode::Add, tmp, a1.place, a2.place);
+                ExprAttributes::new(tmp)
+            },
+            &BoolExpr::NumExpr(ref e1) => {
+                e1.generate_code(code_gen)
+            },                        
+        }
+    }
+}
+
 impl ParseNode for BoolExpr {
     fn parse(parser : &mut Parser) -> Box<Self> {
         // bool -> join
@@ -28,11 +92,7 @@ impl ParseNode for BoolExpr {
             x = Box::new(BoolExpr::Or(x, BoolExpr::join(parser)));
         }
         x
-    }
-    
-    fn generate_code(&self, code_gen : &mut CodeGenerator) {
-        unimplemented!()
-    }    
+    } 
 }
 
 impl BoolExpr {
@@ -107,6 +167,80 @@ pub enum NumExpr {
     False,
 }
 
+impl NumExpr {    
+    fn generate_code(&self, code_gen : &mut CodeGenerator) -> ExprAttributes {
+        match self {
+            &NumExpr::Add(ref e1, ref e2) => {
+                let a1 = e1.generate_code(code_gen);
+                let a2 = e2.generate_code(code_gen);
+                let tmp = code_gen.new_temp();
+                code_gen.emit(OpCode::Add, tmp, a1.place, a2.place);
+                ExprAttributes::new(tmp)    
+            },
+            &NumExpr::Sub(ref e1, ref e2) => {
+                let a1 = e1.generate_code(code_gen);
+                let a2 = e2.generate_code(code_gen);
+                let tmp = code_gen.new_temp();
+                code_gen.emit(OpCode::Sub, tmp, a1.place, a2.place);
+                ExprAttributes::new(tmp)    
+            },
+            &NumExpr::Mul(ref e1, ref e2) => {
+                let a1 = e1.generate_code(code_gen);
+                let a2 = e2.generate_code(code_gen);
+                let tmp = code_gen.new_temp();
+                code_gen.emit(OpCode::Mul, tmp, a1.place, a2.place);
+                ExprAttributes::new(tmp)    
+            },
+            &NumExpr::Div(ref e1, ref e2) => {
+                let a1 = e1.generate_code(code_gen);
+                let a2 = e2.generate_code(code_gen);
+                let tmp = code_gen.new_temp();
+                code_gen.emit(OpCode::Div, tmp, a1.place, a2.place);
+                ExprAttributes::new(tmp)    
+            },
+            &NumExpr::Not(ref e1) => {
+                //BUG
+                unimplemented!();
+                let a1 = e1.generate_code(code_gen);
+                let tmp = code_gen.new_temp();
+                code_gen.emit(OpCode::Add, tmp, a1.place, a1.place);
+                ExprAttributes::new(tmp)    
+            },
+            &NumExpr::Minus(ref e1) => {
+                let a1 = e1.generate_code(code_gen);
+                let tmp = code_gen.new_temp();
+                code_gen.emit(OpCode::Minus, tmp, a1.place, a1.place);
+                ExprAttributes::new(tmp)    
+            },
+            &NumExpr::Expr(ref e1) => {
+                e1.generate_code(code_gen)
+            },
+            &NumExpr::Loc(ref l) => {
+                //BUG: how do we treat Loc?
+                l.generate_code(code_gen)
+            },
+            &NumExpr::Num(x) => {
+                //BUG: how do we treat constants?
+                let tmp = code_gen.new_temp();
+                code_gen.emit(OpCode::Mov, tmp, tmp, x);
+                ExprAttributes::new(tmp)    
+            },
+            &NumExpr::True => {
+                //BUG: how do we treat constants?
+                let tmp = code_gen.new_temp();
+                code_gen.emit(OpCode::Add, tmp, a1.place, a2.place);
+                ExprAttributes::new(tmp)    
+            },
+            &NumExpr::False => {
+                //BUG: how do we treat constants?
+                let tmp = code_gen.new_temp();
+                code_gen.emit(OpCode::Add, tmp, a1.place, a2.place);
+                ExprAttributes::new(tmp)    
+            },
+        }
+    }
+}
+
 impl ParseNode for NumExpr {
     fn parse(parser : &mut Parser) -> Box<Self> {
         let mut x = NumExpr::term(parser);
@@ -127,10 +261,6 @@ impl ParseNode for NumExpr {
         }
         x
     }
-
-    fn generate_code(&self, code_gen : &mut CodeGenerator) {
-        unimplemented!()
-    }    
 }
 
 impl NumExpr {
@@ -234,9 +364,5 @@ impl ParseNode for Loc {
         } else {
             panic!("Expected ide inside lvalue. Found: {:?}", parser.lookahead.tag)
         }
-    }
-
-    fn generate_code(&self, code_gen : &mut CodeGenerator) {
-        unimplemented!()
     }
 }

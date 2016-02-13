@@ -14,7 +14,6 @@ pub struct Parser {
 
 pub trait ParseNode {
     fn parse(& mut Parser) -> Box<Self>;
-    fn generate_code(&self, &mut CodeGenerator);
 }
 
 

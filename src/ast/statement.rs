@@ -15,10 +15,6 @@ impl ParseNode for Program {
             block : Block::parse(parser),
         })
     }
-    
-    fn generate_code(&self, code_gen : &mut CodeGenerator) {
-        self.block.generate_code(code_gen);
-    }
 }
 
 #[derive(PartialEq, Debug)]
@@ -47,7 +43,9 @@ impl ParseNode for Block {
             stmts : stmts,
         })
     }
-    
+}
+
+impl Block {
     fn generate_code(&self, code_gen : &mut CodeGenerator) {
         code_gen.sym_table.push_frame();
         for d in &self.decls {
@@ -85,7 +83,9 @@ impl ParseNode for Decl {
             _ => panic!("Expecting identifier after type inside a declaration.")
         }
     }
-    
+}
+
+impl Decl {
     fn generate_code(&self, code_gen : &mut CodeGenerator) {
         code_gen.sym_table.put((*self.id).clone(), (*self.type_id).clone());
     }
@@ -127,11 +127,6 @@ impl ParseNode for Type {
             },
             _   => panic!("Wrong Token for Type")
         }
-    }
-    
-    // Types don't generate code, they just add info on Decl in the sym_table.
-    fn generate_code(&self, code_gen : &mut CodeGenerator) {
-        unreachable!()
     }
 }
 
@@ -193,9 +188,11 @@ impl ParseNode for Statement {
             }
             _ => panic!("Expected a valid statement.")
         }
-    }
-
-    fn generate_code(&self, code_gen : &mut CodeGenerator) {
-        unimplemented!()
     }    
+}
+
+impl Statement {
+    fn generate_code(&self, code_gen : &mut CodeGenerator) {
+        unimplemented!();
+    }
 }
