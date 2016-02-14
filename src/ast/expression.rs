@@ -67,13 +67,22 @@ impl BoolExpr {
                 let a2 = e2.generate_code(code_gen);
                 let tmp = code_gen.new_temp();
                 code_gen.emit(OpCode::Sub, tmp, a1.place, a2.place);
-                /*BUGBUG BUG BUG BUG BUG
                 match rel {
-                    Relop::Ge  => 
-                    Relop::Gr  => 
-                    Relop::Leq => 
-                    Relop::Les => 
-                }*/
+                    &Relop::Ge  => {
+                        code_gen.emit(OpCode::IsNeg, tmp, tmp, tmp);
+                        code_gen.emit(OpCode::Not, tmp, tmp, tmp);
+                    },
+                    &Relop::Gr  => {
+                        code_gen.emit(OpCode::IsPos, tmp, tmp, tmp);  
+                    },
+                    &Relop::Leq => {
+                        code_gen.emit(OpCode::IsPos, tmp, tmp, tmp);
+                        code_gen.emit(OpCode::Not, tmp, tmp, tmp);
+                    }
+                    &Relop::Les => {
+                        code_gen.emit(OpCode::IsNeg, tmp, tmp, tmp);
+                    },
+                }
                 ExprAttributes::new(tmp)                
             },
             &BoolExpr::NumExpr(ref e1) => {

@@ -7,6 +7,8 @@ pub enum OpCode {
     And,
     Or,
     Not,
+    IsPos,
+    IsNeg,
     // Num operators.
     Add,
     Sub,
