@@ -141,7 +141,7 @@ impl CodeGenerator {
         }
     }
     
-    // Return the instruction because we might need to backpatch it later.
+    // Return the instruction id because we might need to backpatch it later.
     pub fn emit_jump(&mut self, op : OpCode, lbl : Label, addr : Address) -> usize {
         let jump = Address { 
             mode  : AddressMode::Label,
