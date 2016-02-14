@@ -34,7 +34,7 @@ pub struct Block {
     pub decls : Vec<Box<Decl>>,
     pub stmts : Vec<Box<Statement>>,
 }
-
+//TODO : should manage stack pointer
 impl ParseNode for Block {
     fn parse(parser : &mut Parser) -> Box<Self> {
         let mut decls = Vec::new();
@@ -46,7 +46,7 @@ impl ParseNode for Block {
                 // NOTE: this way we can mix stmts and declarations.
                 Tag::Type => decls.push(Decl::parse(parser)),
                 Tag::CloseBlock => break,
-                _              => stmts.push(Statement::parse(parser)),
+                _               => stmts.push(Statement::parse(parser)),
             };
         }
         parser.match_lookahead(Tag::CloseBlock);
@@ -114,10 +114,12 @@ impl Decl {
 #[derive(PartialEq, Debug, Clone)]
 pub enum BasicType { Int, Float }
 
+// Array dim are static.
 #[derive(PartialEq, Debug, Clone)]
 pub struct Type {
-    basic_type : BasicType,
-    array_dim  : u32,
+    pub basic_type    : BasicType,
+    pub element_width : u32,
+    pub dim_width     : Vec<u32>,
 }
 
 impl ParseNode for Type {
@@ -129,20 +131,32 @@ impl ParseNode for Type {
                     TokenInfo::Float => BasicType::Float,
                     _ => unreachable!("Wrong info for Type token.")
                 };
-                let mut w : u32 = 4;                
+                let base_dim = 4; // All types have 4 bytes of dimension
+                let mut w = Vec::new();                
                 while parser.lookahead.tag == Tag::LArrParen {
                     // type -> type[num]
                     parser.shift_lookahead();
                     let n = parser.match_lookahead(Tag::Num);
                     if let TokenInfo::Num(x) = n.info {
-                        w = w*x;
-                    } else { unreachable!("Wrong info for num inside token"); }
+                        w.push(x);
+                    } else { panic!("Array dimensio should be static."); }
                     parser.match_lookahead(Tag::RArrParen);
+                }
+                let mut i = w.len() - 1;
+                let mut dim = base_dim;
+                while i >= 0 {
+                    w[i] = w[i] * dim;
+                    dim = w[i];
+                    i -= 1;
+                }
+                if w.len() >= 0 {
+                    w.push(base_dim);
                 }
                 
                 Box::new(Type {
                     basic_type : base,
-                    array_dim  : w,
+                    element_width : base_dim, 
+                    dim_width  : w,
                 })
             },
             _   => panic!("Wrong Token for Type")

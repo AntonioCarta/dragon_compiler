@@ -1,4 +1,6 @@
 lexer
 - multiline Parsing
+    maybe we shouldn't save the buffer but instead move it inside the iterator
+    with something like an into_iter method?
 - RustDOC
 - How much memory is going away with all these String copies?

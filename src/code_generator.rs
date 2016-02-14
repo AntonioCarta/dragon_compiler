@@ -1,4 +1,3 @@
-use std::collections::linked_list::LinkedList;
 use parser::Parser;
 use symbol_table::SymbolTable;
 
@@ -22,13 +21,15 @@ pub enum OpCode {
 
 #[derive(PartialEq, Debug, Clone, Copy)]
 pub enum AddressMode {
-    Register, Constant, Label,
+    Register,       // Register containing a value.
+    FramePointer,   // Register containing an address to stack variable.
+    Constant,       // Constant value not in a register.
+    Label,          // ID of an instruction for JUMP and CALL.
 }
 
 #[derive(PartialEq, Debug, Clone, Copy)]
 pub struct Address {
     mode  : AddressMode,
-    // Can be used as label when used as operand for jumps.
     place : i32,
 }
 
@@ -145,6 +146,14 @@ impl CodeGenerator {
         self.temp_num += 1;
         Address {
             mode  : AddressMode::Register,
+            place : self.temp_num,
+        }
+    }
+    
+    pub fn new_pointer(&mut self) -> Address {
+        self.temp_num += 1;
+        Address {
+            mode  : AddressMode::FramePointer,
             place : self.temp_num,
         }
     }

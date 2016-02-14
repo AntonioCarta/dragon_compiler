@@ -30,7 +30,6 @@ pub enum BoolExpr {
     NumExpr(Box<NumExpr>),
 }
 
-// BUG: implement equality
 impl BoolExpr {
     pub fn generate_code(&self, code_gen : &mut CodeGenerator) -> ExprAttributes {
         match self {
@@ -333,14 +332,32 @@ impl Loc {
     pub fn generate_code(&self, code_gen : &mut CodeGenerator) -> ExprAttributes {
         match self {
             &Loc::Index(ref s, ref v) => {
-                // BUG: need a stack implementation to use arrays.
-                let info = code_gen.sym_table.get_ide(s);
-                ExprAttributes { place : Address::null_address() }
-            }
+                // TODO: cloning the array every time is not the best we can do.
+                let info = match code_gen.sym_table.get_ide(s) {
+                    Some(info) => {
+                        info.typeinfo.dim_width.clone()    
+                    },
+                    None => Vec::new(),
+                };
+                
+                if v.len() != info.len() - 1 {
+                    panic!("Wrong dimension for array.");
+                }
+                
+                let range = 0..v.len();
+                let offset = code_gen.new_pointer();
+                code_gen.emit(OpCode::Add, offset, Address::new_constant(0), Address::new_constant(0));
+                for i in range {
+                    let tmp = v[i].generate_code(code_gen).place;
+                    code_gen.emit(OpCode::Mul, tmp, tmp, Address::new_constant(info[i+1] as i32));
+                    code_gen.emit(OpCode::Add, offset, offset, tmp);
+                }                
+                ExprAttributes { place : offset }
+                }
             &Loc::Ide(ref s) => {
                 let info = code_gen.sym_table
                             .get_ide(s)
-                            .expect("Undeclared ide in current scope.");
+                            .expect("Undeclared identifier in current scope.");
                 ExprAttributes { place : info.address }
             }
         }

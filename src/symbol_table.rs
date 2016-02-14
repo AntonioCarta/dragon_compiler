@@ -1,14 +1,20 @@
 use std::collections::HashMap;
 use ast::statement::Type;
 use code_generator::Address;
+use std::iter::Iterator;
 
 pub struct IdeInfo {
     pub typeinfo : Type,   
     pub address  : Address,
 }
 
+struct Frame {
+    width : u32,
+    table :HashMap<String, IdeInfo>,
+}
+
 pub struct SymbolTable {
-    frame_stack : Vec<HashMap<String, IdeInfo>>,
+    frame_stack : Vec<Frame>,
 }
 
 impl SymbolTable {
@@ -18,7 +24,11 @@ impl SymbolTable {
         }    
     } 
     pub fn push_frame(&mut self) {
-        self.frame_stack.push(HashMap::new());
+        let f = Frame {
+            width : 0,
+            table : HashMap::new(),    
+        };
+        self.frame_stack.push(f);
     }
     
     pub fn pop_frame(&mut self) {
@@ -31,11 +41,14 @@ impl SymbolTable {
             address  : address,
         };
         let n = self.frame_stack.len();
-        self.frame_stack[n-1].insert(name, info);
+        let array_width = info.typeinfo.dim_width.iter().fold(0, |sum, x| sum + x);
+        let ide_width = info.typeinfo.element_width * array_width;
+        self.frame_stack[n-1].table.insert(name, info);        
+        self.frame_stack[n-1].width += ide_width;
     }
-    
+    // BUG: should search other frame if not found.
     pub fn get_ide(&self, name : &str) -> Option<&IdeInfo> {
         self.frame_stack[self.frame_stack.len()-1]
-            .get(name)
+            .table.get(name)
     }
 }
