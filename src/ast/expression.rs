@@ -49,31 +49,33 @@ impl BoolExpr {
                 ExprAttributes::new(tmp)
             },
             &BoolExpr::Eq(ref e1, ref e2) => {
-                //BUG
-                unimplemented!();
                 let a1 = e1.generate_code(code_gen);
                 let a2 = e2.generate_code(code_gen);
                 let tmp = code_gen.new_temp();
-                code_gen.emit(OpCode::Add, tmp, a1.place, a2.place);
+                code_gen.emit(OpCode::Sub, tmp, a1.place, a2.place);
+                code_gen.emit(OpCode::Not, tmp, tmp, tmp);
                 ExprAttributes::new(tmp)
             },
             &BoolExpr::Neq(ref e1, ref e2) => {
-                //BUG
-                unimplemented!();
                 let a1 = e1.generate_code(code_gen);
                 let a2 = e2.generate_code(code_gen);
                 let tmp = code_gen.new_temp();
-                code_gen.emit(OpCode::Add, tmp, a1.place, a2.place);
+                code_gen.emit(OpCode::Sub, tmp, a1.place, a2.place);
                 ExprAttributes::new(tmp)
             },
             &BoolExpr::Relop(ref rel, ref e1, ref e2) => {
-                //BUG
-                unimplemented!();
                 let a1 = e1.generate_code(code_gen);
                 let a2 = e2.generate_code(code_gen);
                 let tmp = code_gen.new_temp();
-                code_gen.emit(OpCode::Add, tmp, a1.place, a2.place);
-                ExprAttributes::new(tmp)
+                code_gen.emit(OpCode::Sub, tmp, a1.place, a2.place);
+                /*BUGBUG BUG BUG BUG BUG
+                match rel {
+                    Relop::Ge  => 
+                    Relop::Gr  => 
+                    Relop::Leq => 
+                    Relop::Les => 
+                }*/
+                ExprAttributes::new(tmp)                
             },
             &BoolExpr::NumExpr(ref e1) => {
                 e1.generate_code(code_gen)
@@ -199,11 +201,9 @@ impl NumExpr {
                 ExprAttributes::new(tmp)    
             },
             &NumExpr::Not(ref e1) => {
-                //BUG
-                unimplemented!();
                 let a1 = e1.generate_code(code_gen);
                 let tmp = code_gen.new_temp();
-                code_gen.emit(OpCode::Add, tmp, a1.place, a1.place);
+                code_gen.emit(OpCode::Not, tmp, a1.place, a1.place);
                 ExprAttributes::new(tmp)    
             },
             &NumExpr::Minus(ref e1) => {
@@ -216,24 +216,16 @@ impl NumExpr {
                 e1.generate_code(code_gen)
             },
             &NumExpr::Loc(ref l) => {
-                //BUG: how do we treat Loc?
                 l.generate_code(code_gen)
             },
             &NumExpr::Num(x) => {
-                //BUG: how do we treat constants?
-                let tmp = code_gen.new_temp();
-                //code_gen.emit(OpCode::Mov, tmp, tmp, x);
-                ExprAttributes::new(tmp)    
+                ExprAttributes::new(Address::new_constant(x as i32))    
             },
             &NumExpr::True => {
-                //BUG: how do we treat constants?
-                let tmp = code_gen.new_temp();
-                ExprAttributes::new(tmp)    
+                ExprAttributes::new(Address::new_constant(1))   
             },
             &NumExpr::False => {
-                //BUG: how do we treat constants?
-                let tmp = code_gen.new_temp();
-                ExprAttributes::new(tmp)    
+                ExprAttributes::new(Address::new_constant(0))  
             },
         }
     }
@@ -339,7 +331,19 @@ pub enum Loc {
 
 impl Loc {
     pub fn generate_code(&self, code_gen : &mut CodeGenerator) -> ExprAttributes {
-        unimplemented!()
+        match self {
+            &Loc::Index(ref s, ref v) => {
+                // BUG: need a stack implementation to use arrays.
+                let info = code_gen.sym_table.get_ide(s);
+                ExprAttributes { place : Address::null_address() }
+            }
+            &Loc::Ide(ref s) => {
+                let info = code_gen.sym_table
+                            .get_ide(s)
+                            .expect("Undeclared ide in current scope.");
+                ExprAttributes { place : info.address }
+            }
+        }
     }
 }
 

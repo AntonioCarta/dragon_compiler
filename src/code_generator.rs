@@ -21,7 +21,13 @@ pub enum OpCode {
 }
 
 #[derive(PartialEq, Debug, Clone, Copy)]
+pub enum AddressMode {
+    Register, Constant, Label,
+}
+
+#[derive(PartialEq, Debug, Clone, Copy)]
 pub struct Address {
+    mode  : AddressMode,
     // Can be used as label when used as operand for jumps.
     place : i32,
 }
@@ -33,7 +39,17 @@ pub struct Label {
 
 impl Address {
     pub fn null_address() -> Self {
-        Address { place : 0, }
+        Address { 
+            mode  : AddressMode::Label,
+            place : 0, 
+        }
+    }
+    
+    pub fn new_constant(x : i32) -> Self {
+        Address {
+            mode  : AddressMode::Constant,
+            place : x,
+        }
     }
 }
 
@@ -105,7 +121,10 @@ impl CodeGenerator {
     
     // Return the instruction because we might need to backpatch it later.
     pub fn emit_jump(&mut self, op : OpCode, lbl : Label, addr : Address) -> usize {
-        let jump = Address { place : lbl.place };
+        let jump = Address { 
+            mode  : AddressMode::Label,
+            place : lbl.place, 
+        };
         self.instr_num += 1;
         let instr = AddressCode {
             op  : op,
@@ -125,6 +144,7 @@ impl CodeGenerator {
     pub fn new_temp(&mut self) -> Address {
         self.temp_num += 1;
         Address {
+            mode  : AddressMode::Register,
             place : self.temp_num,
         }
     }

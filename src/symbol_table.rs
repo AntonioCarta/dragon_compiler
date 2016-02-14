@@ -3,8 +3,8 @@ use ast::statement::Type;
 use code_generator::Address;
 
 pub struct IdeInfo {
-    typeinfo : Type,   
-    address  : Address,
+    pub typeinfo : Type,   
+    pub address  : Address,
 }
 
 pub struct SymbolTable {
@@ -34,8 +34,8 @@ impl SymbolTable {
         self.frame_stack[n-1].insert(name, info);
     }
     
-    pub fn get_ide(&self, name : String) -> Option<&IdeInfo> {
+    pub fn get_ide(&self, name : &str) -> Option<&IdeInfo> {
         self.frame_stack[self.frame_stack.len()-1]
-            .get(&name)
+            .get(name)
     }
 }
