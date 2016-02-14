@@ -60,14 +60,14 @@ impl ParseNode for Block {
 impl Block {
     fn generate_code(&self, code_gen : &mut CodeGenerator) -> StatementAttributes {
         let lblbegin = code_gen.emit_label();
-        code_gen.sym_table.push_frame();
+        code_gen.push_frame();
         for d in &self.decls {
             d.generate_code(code_gen);
         }
         for v in &self.stmts {
             v.generate_code(code_gen);
         }
-        code_gen.sym_table.pop_frame();
+        code_gen.pop_frame();
         let lblafter = code_gen.emit_label();
         StatementAttributes {
             lblbegin  : lblbegin,

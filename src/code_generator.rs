@@ -18,7 +18,6 @@ pub enum OpCode {
     // Jump.
     Goto,
     JmpZ,
-    JmpNZ,
 }
 
 #[derive(PartialEq, Debug, Clone, Copy)]
@@ -86,22 +85,28 @@ impl IntermediateRepresentation {
 }
 
 pub struct CodeGenerator {
-    pub sym_table : SymbolTable, 
-    parser    : Parser,    
-    code      : IntermediateRepresentation,
-    temp_num  : i32,
-    instr_num : i32,
+    pub sym_table   : SymbolTable, 
+    parser          : Parser,    
+    code            : IntermediateRepresentation,
+    temp_num        : i32,
+    instr_num       : i32,
+    
+    stack_pointer   : Address,
 }
 
 impl CodeGenerator {
     pub fn new(parser : Parser) -> Self{
-        CodeGenerator {
+        let mut cg = CodeGenerator {
             parser    : parser,
             sym_table : SymbolTable::new(),
             code      : IntermediateRepresentation::new(),
             temp_num  : 0,
             instr_num : 0,
-        }
+            
+            stack_pointer : Address::null_address(),
+        };
+        cg.stack_pointer = cg.new_temp();
+        cg
     }
     
     pub fn emit(&mut self, op : OpCode, res : Address, x : Address, y : Address) {
@@ -114,6 +119,20 @@ impl CodeGenerator {
             id  : self.instr_num,
         };
         self.code.append(instr);
+    }
+    
+    pub fn push_frame(&mut self) {
+        let w = self.sym_table.get_frame_width();
+        let stp = self.stack_pointer.clone();
+        self.sym_table.push_frame();
+        self.emit(OpCode::Add, stp, stp, Address::new_constant(w as i32));
+    }
+    
+    pub fn pop_frame(&mut self) {
+        let w = self.sym_table.get_frame_width();
+        let stp = self.stack_pointer.clone();
+        self.sym_table.pop_frame();
+        self.emit(OpCode::Sub, stp, stp, Address::new_constant(w as i32));
     }
     
     pub fn emit_label(&self) -> Label {

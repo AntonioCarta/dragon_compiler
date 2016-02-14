@@ -51,4 +51,8 @@ impl SymbolTable {
         self.frame_stack[self.frame_stack.len()-1]
             .table.get(name)
     }
+    
+    pub fn get_frame_width(&self) -> u32 {
+        self.frame_stack[self.frame_stack.len() - 1].width
+    }
 }
