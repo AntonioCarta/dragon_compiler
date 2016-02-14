@@ -1,12 +1,10 @@
 use parser::{ParseNode, Parser};
 use lexer::{TokenInfo, Tag};
 use ast::expression::{BoolExpr, Loc};
-use code_generator::{CodeGenerator, Label, OpCode, AddressCode, Address};
+use code_generator::{CodeGenerator, OpCode, Address};
 
 struct StatementAttributes {
-    lblbegin  : Label,
-    lblafter  : Label,
-    backpatch : Vec<AddressCode>,
+    break_list : Vec<usize>,
 }
 
 #[derive(PartialEq, Debug)]
@@ -34,7 +32,7 @@ pub struct Block {
     pub decls : Vec<Box<Decl>>,
     pub stmts : Vec<Box<Statement>>,
 }
-//TODO : should manage stack pointer
+
 impl ParseNode for Block {
     fn parse(parser : &mut Parser) -> Box<Self> {
         let mut decls = Vec::new();
@@ -59,20 +57,18 @@ impl ParseNode for Block {
 
 impl Block {
     fn generate_code(&self, code_gen : &mut CodeGenerator) -> StatementAttributes {
-        let lblbegin = code_gen.emit_label();
+        let mut break_list = Vec::new();
         code_gen.push_frame();
         for d in &self.decls {
             d.generate_code(code_gen);
         }
         for v in &self.stmts {
-            v.generate_code(code_gen);
+            let mut sa = v.generate_code(code_gen);
+            break_list.append(&mut sa.break_list);
         }
         code_gen.pop_frame();
-        let lblafter = code_gen.emit_label();
         StatementAttributes {
-            lblbegin  : lblbegin,
-            lblafter  : lblafter,
-            backpatch : Vec::new(),
+            break_list : break_list,
         }
     }
 }
@@ -139,17 +135,18 @@ impl ParseNode for Type {
                     let n = parser.match_lookahead(Tag::Num);
                     if let TokenInfo::Num(x) = n.info {
                         w.push(x);
-                    } else { panic!("Array dimensio should be static."); }
+                    } else { panic!("Array dimension should be static."); }
                     parser.match_lookahead(Tag::RArrParen);
                 }
-                let mut i = w.len() - 1;
+                let mut i : i32 = (w.len() as i32) - 1;
                 let mut dim = base_dim;
                 while i >= 0 {
-                    w[i] = w[i] * dim;
-                    dim = w[i];
+                    let j = i as usize;
+                    w[j] = w[j] * dim;
+                    dim = w[j];
                     i -= 1;
                 }
-                if w.len() >= 0 {
+                if w.len() > 0 {
                     w.push(base_dim);
                 }
                 
@@ -176,7 +173,8 @@ pub enum Statement {
 
 impl Statement {
     fn generate_code(&self, code_gen : &mut CodeGenerator) -> StatementAttributes {
-        let lblbegin = code_gen.emit_label();                               
+        let lblbegin = code_gen.emit_label();  
+        let mut break_list = Vec::new();                             
         match self {
             &Statement::Assign(ref l, ref be) => {
                 let place = l.generate_code(code_gen);
@@ -184,20 +182,26 @@ impl Statement {
                 code_gen.emit(OpCode::Mov, place.place, battr.place, battr.place);
             },
             &Statement::If(ref be, ref stmt) => {
-                let battr = be.generate_code(code_gen);
-                let instr = code_gen.emit_jump(OpCode::JmpZ, lblbegin, Address::null_address());
-                stmt.generate_code(code_gen);
+                let battr = be.generate_code(code_gen);                
+                let instr = code_gen.emit_jump(OpCode::JmpZ, lblbegin, battr.place);
+                let mut sa = stmt.generate_code(code_gen);
+                break_list.append(&mut sa.break_list);
                 let lblafter = code_gen.emit_label();
                 code_gen.patch_jump(instr, lblafter);
             },
             &Statement::IfElse(ref be, ref st1, ref st2) => {
                 let battr = be.generate_code(code_gen);
+                // Jump to else.
                 let instr = code_gen.emit_jump(OpCode::JmpZ, lblbegin, battr.place);
-                st1.generate_code(code_gen);
+                // If code.
+                let mut sa1 = st1.generate_code(code_gen);
+                break_list.append(&mut sa1.break_list);
                 let jmpendif = code_gen.emit_jump(OpCode::Goto, lblbegin, Address::null_address());
+                // Else code.
                 let lblelse = code_gen.emit_label();
                 code_gen.patch_jump(instr, lblelse);
-                st2.generate_code(code_gen);
+                let mut sa2 = st2.generate_code(code_gen);
+                break_list.append(&mut sa2.break_list);
                 let lblendelse = code_gen.emit_label();
                 code_gen.patch_jump(jmpendif, lblendelse);              
             },
@@ -207,12 +211,15 @@ impl Statement {
                 stmt.generate_code(code_gen);
                 code_gen.emit_jump(OpCode::Goto, lblbegin, Address::null_address());
                 let lblafter = code_gen.emit_label();
+                for id in break_list {
+                    code_gen.patch_jump(id, lblafter);
+                }
+                break_list = Vec::new();
                 code_gen.patch_jump(jmp, lblafter);
             },
             &Statement::Break => {
-                // BUG: Break is not working right now.
                 let addr = code_gen.emit_jump(OpCode::Goto, lblbegin, Address::null_address());
-                let lblafter = code_gen.emit_label();
+                break_list.push(addr);
             },
             &Statement::BlockStmt(ref block) => {
                 block.generate_code(code_gen);    
@@ -220,9 +227,7 @@ impl Statement {
         }
         
         StatementAttributes {
-            lblbegin  : lblbegin,
-            lblafter  : code_gen.emit_label(),
-            backpatch : Vec::new(),
+            break_list : break_list,
         }
     }
 }

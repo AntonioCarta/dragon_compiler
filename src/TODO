@@ -4,3 +4,5 @@ lexer
     with something like an into_iter method?
 - RustDOC
 - How much memory is going away with all these String copies?
+- Short-Circuit evaluation
+- language interpreter
