@@ -3,6 +3,7 @@ mod parser;
 mod test;
 mod symbol_table;
 mod code_generator;
+mod interpreter;
 mod ast;
 
 fn main() {

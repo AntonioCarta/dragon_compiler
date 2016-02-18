@@ -30,8 +30,8 @@ pub enum AddressMode {
 
 #[derive(PartialEq, Debug, Clone, Copy)]
 pub struct Address {
-    mode  : AddressMode,
-    place : i32,
+    pub mode  : AddressMode,
+    pub place : i32,
 }
 
 #[derive(PartialEq, Debug, Clone, Copy)]
@@ -56,11 +56,11 @@ impl Address {
 }
 
 pub struct AddressCode {
-    id  : i32,
-    op  : OpCode,
-    res : Address, 
-    x   : Address,
-    y   : Address,
+        id  : i32,
+    pub op  : OpCode,
+    pub res : Address, 
+    pub x   : Address,
+    pub y   : Address,
 }
 
 struct IntermediateRepresentation {
