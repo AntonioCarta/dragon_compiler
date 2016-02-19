@@ -12,6 +12,8 @@ fn main() {
     let scanner = lexer::Scanner::new_static("{}".to_string());
     let parser = parser::Parser::new(scanner);
     let mut code_gen = code_generator::CodeGenerator::new(parser);
-    
     code_gen.generate_code();
+    
+    let mut inter = interpreter::Interpreter::new(code_gen.code);
+    inter.execute();        
 }

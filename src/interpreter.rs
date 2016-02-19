@@ -1,4 +1,4 @@
-use code_generator::{OpCode, AddressMode, AddressCode, Address};
+use code_generator::{OpCode, AddressMode, AddressCode, Address, IntermediateRepresentation};
 
 pub struct Interpreter {
     code      : Vec<AddressCode>,
@@ -7,9 +7,9 @@ pub struct Interpreter {
 }
 
 impl Interpreter {
-    pub fn new(code : Vec<AddressCode>) -> Self{
+    pub fn new(code : IntermediateRepresentation) -> Self{
         Interpreter {
-            code  : code,
+            code  : code.instructions,
             stack : Vec::new(),
             regs  : Vec::new(),    
         }

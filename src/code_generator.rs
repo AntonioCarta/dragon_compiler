@@ -63,8 +63,8 @@ pub struct AddressCode {
     pub y   : Address,
 }
 
-struct IntermediateRepresentation {
-    instructions : Vec<AddressCode>,
+pub struct IntermediateRepresentation {
+    pub instructions : Vec<AddressCode>,
 }
 
 impl IntermediateRepresentation {
@@ -87,7 +87,7 @@ impl IntermediateRepresentation {
 pub struct CodeGenerator {
     pub sym_table   : SymbolTable, 
     parser          : Parser,    
-    code            : IntermediateRepresentation,
+    pub code            : IntermediateRepresentation,
     temp_num        : i32,
     instr_num       : i32,
     
