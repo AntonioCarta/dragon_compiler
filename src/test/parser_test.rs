@@ -1,7 +1,8 @@
 #[cfg(test)]
 mod test {
-    use parser::{ParseNode, BoolExpr as B, NumExpr as N, Program, Type,
-                 Loc, Statement as S, Decl as D, Relop, Block};
+    use ast::expression::{BoolExpr as B, NumExpr as N, Relop, Loc};
+    use ast::statement::{Program, Block, Type, Statement as S, Decl as D, BasicType};
+    use parser::ParseNode;
     use lexer;
     use parser;
         
@@ -130,16 +131,26 @@ mod test {
     
     #[test]
     fn decl_test() {   
-        let s = "int x;";        
+        let s = "int x;";     
+        let type_int = nbox(Type {
+            basic_type    : BasicType::Int,
+            element_width : 4,
+            dim_width     : vec![],                
+        });   
         let ast = nbox(D {
-            type_id : nbox(Type::Int),
+            type_id : type_int,
             id : nbox(String::from("x")),
         });
         assert_eq!(ast, parse_decl(s));
         
         let s = "float[3] x;";
+        let type_float_arr = Type {
+            basic_type    : BasicType::Float,
+            element_width : 4,
+            dim_width     : vec![12, 4],                
+        };   
         let ast = nbox(D {
-            type_id : nbox(Type::Array(nbox(Type::Float), vec![3])),
+            type_id : nbox(type_float_arr),
             id : nbox(String::from("x")),
         });
         assert_eq!(ast, parse_decl(s));
@@ -173,9 +184,14 @@ mod test {
     #[test]
     fn prog_test() {
         let s = "{int x; y=x;}";
+        let type_int = nbox(Type {
+            basic_type    : BasicType::Int,
+            element_width : 4,
+            dim_width     : vec![],                
+        });   
         let ast = prog(
             vec![nbox(D {
-                type_id : nbox(Type::Int),
+                type_id : type_int,
                 id : nbox(String::from("x")),
             })],
             vec![nbox(S::Assign(
